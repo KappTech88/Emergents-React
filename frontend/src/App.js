@@ -1,64 +1,55 @@
 import React, { Suspense, useRef, useMemo, useEffect, useState } from 'react';
-import { Canvas, useFrame, useThree, extend } from '@react-three/fiber';
-import { ScrollControls, Scroll, useScroll, Stars, MeshDistortMaterial, Float, Html } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { ScrollControls, Scroll, useScroll, Stars, MeshDistortMaterial, Float } from '@react-three/drei';
 import * as THREE from 'three';
 
 // ============================================================
 // TAXONOMY I: IMMERSIVE TUNNEL EFFECT
-// A true 3D tunnel that you fly through as you scroll
+// Flying through concentric rings as you scroll
 // ============================================================
 const ImmersiveTunnel = () => {
   const groupRef = useRef();
+  const ringsRef = useRef([]);
   const scroll = useScroll();
-  const { viewport } = useThree();
   
-  // Create multiple ring layers for depth
+  // Create ring data
+  const ringCount = 60;
   const rings = useMemo(() => {
-    return new Array(50).fill(0).map((_, i) => ({
-      z: -i * 2.5,
-      scale: 1 + Math.sin(i * 0.3) * 0.3,
-      rotationSpeed: (i % 2 === 0 ? 1 : -1) * 0.002,
-      color: `hsl(${180 + i * 3}, 80%, ${50 + i * 0.5}%)`,
-      opacity: Math.max(0.15, 1 - i * 0.02)
-    }));
-  }, []);
-
-  // Floating particles in tunnel
-  const particles = useMemo(() => {
-    return new Array(80).fill(0).map((_, i) => ({
-      position: [
-        (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 10,
-        -Math.random() * 120
-      ],
-      scale: Math.random() * 0.08 + 0.02,
-      speed: Math.random() * 0.5 + 0.5
+    return new Array(ringCount).fill(0).map((_, i) => ({
+      z: -i * 2,
+      baseScale: 3 + Math.sin(i * 0.2) * 0.5,
+      rotationSpeed: (i % 2 === 0 ? 1 : -1) * (0.3 + i * 0.02),
+      hue: 180 + i * 2.5,
+      opacity: Math.max(0.2, 1 - i * 0.015)
     }));
   }, []);
 
   useFrame((state) => {
     if (!groupRef.current) return;
     
-    // Get scroll progress for first section (0-20%)
+    // First 20% of scroll moves through tunnel
     const progress = scroll.range(0, 0.2);
-    
-    // Camera flies through tunnel
     groupRef.current.position.z = progress * 100;
     
-    // Rotate entire tunnel slowly
-    groupRef.current.rotation.z = state.clock.elapsedTime * 0.03;
+    // Rotate individual rings
+    ringsRef.current.forEach((ring, i) => {
+      if (ring) {
+        ring.rotation.z = state.clock.elapsedTime * rings[i].rotationSpeed * 0.1;
+      }
+    });
   });
 
   return (
-    <group ref={groupRef} position={[0, 0, -5]}>
-      {/* Tunnel Rings */}
+    <group ref={groupRef}>
       {rings.map((ring, i) => (
-        <mesh key={`ring-${i}`} position={[0, 0, ring.z]} rotation={[0, 0, state => state?.clock?.elapsedTime * ring.rotationSpeed || 0]}>
-          <torusGeometry args={[4 + Math.sin(i * 0.3) * 0.8, 0.025, 8, 80]} />
-          <meshStandardMaterial
-            color={ring.color}
-            emissive={ring.color}
-            emissiveIntensity={0.6}
+        <mesh 
+          key={`ring-${i}`} 
+          ref={el => ringsRef.current[i] = el}
+          position={[0, 0, ring.z]}
+        >
+          <torusGeometry args={[ring.baseScale, 0.03, 8, 100]} />
+          <meshBasicMaterial
+            color={`hsl(${ring.hue}, 85%, 55%)`}
             transparent
             opacity={ring.opacity}
             side={THREE.DoubleSide}
@@ -66,183 +57,104 @@ const ImmersiveTunnel = () => {
         </mesh>
       ))}
       
-      {/* Floating particles */}
-      {particles.map((p, i) => (
-        <mesh key={`particle-${i}`} position={p.position} scale={p.scale}>
-          <sphereGeometry args={[1, 6, 6]} />
-          <meshBasicMaterial color="#22d3ee" transparent opacity={0.8} />
-        </mesh>
-      ))}
-      
-      {/* Center light source at end of tunnel */}
-      <mesh position={[0, 0, -100]}>
-        <sphereGeometry args={[1, 16, 16]} />
-        <meshBasicMaterial color="#ffffff" />
+      {/* Light at end of tunnel */}
+      <mesh position={[0, 0, -120]}>
+        <sphereGeometry args={[1.5, 32, 32]} />
+        <meshBasicMaterial color="#22d3ee" />
       </mesh>
-      <pointLight position={[0, 0, -100]} intensity={8} color="#22d3ee" distance={150} />
+      <pointLight position={[0, 0, -120]} intensity={10} color="#22d3ee" distance={150} />
     </group>
   );
 };
 
 // ============================================================
-// SECTION 1: HTML OVERLAY (TUNNEL)
+// TAXONOMY II: VELOCITY MORPHING SPHERE
 // ============================================================
-const Section1Content = () => {
-  const { viewport } = useThree();
-  
-  return (
-    <Html
-      center
-      position={[-viewport.width * 0.25, 0, 0]}
-      style={{
-        width: '450px',
-        pointerEvents: 'none'
-      }}
-      transform
-      distanceFactor={10}
-    >
-      <div className="content-card left" data-testid="section-tunnel">
-        <div className="section-number">01</div>
-        <h1 className="title">Taxonomy I</h1>
-        <h2 className="subtitle cyan">Pseudo-3D Tunnel</h2>
-        <p className="description">
-          <strong>"The Z-Axis Zoom"</strong><br/>
-          Flying through a tunnel of light rings. Scroll drives your journey 
-          forward into the vanishing point, creating true depth perception.
-        </p>
-      </div>
-    </Html>
-  );
-};
-
-// ============================================================
-// TAXONOMY II: VELOCITY-BASED MORPHING SPHERE
-// A sphere that deforms based on scroll velocity
-// ============================================================
-const VelocityMorphSphere = () => {
+const VelocitySphere = () => {
   const meshRef = useRef();
   const scroll = useScroll();
   const { viewport } = useThree();
-  const velocityRef = useRef(0);
+  const smoothVelocity = useRef(0);
 
-  useFrame((state, delta) => {
+  useFrame((state) => {
     if (!meshRef.current) return;
     
-    // Smooth velocity tracking
-    const targetVelocity = Math.abs(scroll.delta) * 100;
-    velocityRef.current = THREE.MathUtils.lerp(velocityRef.current, targetVelocity, 0.1);
+    // Track velocity smoothly
+    const targetVel = Math.abs(scroll.delta) * 80;
+    smoothVelocity.current = THREE.MathUtils.lerp(smoothVelocity.current, targetVel, 0.08);
     
-    // Rotation based on scroll
-    meshRef.current.rotation.x = state.clock.elapsedTime * 0.3;
-    meshRef.current.rotation.y = state.clock.elapsedTime * 0.5;
+    // Animate rotation
+    meshRef.current.rotation.x = state.clock.elapsedTime * 0.4;
+    meshRef.current.rotation.y = state.clock.elapsedTime * 0.6;
     
-    // Scale distortion based on velocity
-    const distortAmount = Math.min(velocityRef.current * 0.5, 1);
-    meshRef.current.material.distort = 0.3 + distortAmount * 0.7;
-    meshRef.current.material.speed = 2 + velocityRef.current * 3;
+    // Update distortion based on velocity
+    if (meshRef.current.material) {
+      meshRef.current.material.distort = 0.2 + Math.min(smoothVelocity.current * 0.4, 0.8);
+      meshRef.current.material.speed = 1.5 + smoothVelocity.current * 2;
+    }
   });
 
   return (
-    <group position={[0, -viewport.height * 1.5, 0]}>
-      <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
-        <mesh ref={meshRef} scale={2.5}>
-          <icosahedronGeometry args={[1, 8]} />
-          <MeshDistortMaterial
-            color="#a855f7"
-            emissive="#7c3aed"
-            emissiveIntensity={0.4}
-            roughness={0.2}
-            metalness={0.8}
-            distort={0.3}
-            speed={2}
-          />
-        </mesh>
-      </Float>
-      
-      {/* Section 2 HTML */}
-      <Html
-        center
-        position={[viewport.width * 0.25, 0, 0]}
-        style={{
-          width: '450px',
-          pointerEvents: 'none'
-        }}
-        transform
-        distanceFactor={10}
-      >
-        <div className="content-card right" data-testid="section-velocity">
-          <div className="section-number">02</div>
-          <h1 className="title">Taxonomy II</h1>
-          <h2 className="subtitle purple">Velocity Deformation</h2>
-          <p className="description">
-            <strong>"The Gelatinous Feel"</strong><br/>
-            The sphere morphs based on your scroll speed. Fast scrolling 
-            creates dramatic distortion—a tactile, organic response.
-          </p>
-          <div className="hint">↕ Scroll fast to see the effect!</div>
-        </div>
-      </Html>
-      
-      <pointLight position={[3, 0, 3]} intensity={2} color="#a855f7" />
-    </group>
+    <Float speed={1.5} rotationIntensity={0.3} floatIntensity={0.8}>
+      <mesh ref={meshRef} position={[0, -viewport.height * 1.5, 0]} scale={2.8}>
+        <icosahedronGeometry args={[1, 8]} />
+        <MeshDistortMaterial
+          color="#a855f7"
+          emissive="#7c3aed"
+          emissiveIntensity={0.5}
+          roughness={0.15}
+          metalness={0.85}
+          distort={0.3}
+          speed={2}
+        />
+      </mesh>
+    </Float>
   );
 };
 
 // ============================================================
 // TAXONOMY III: LIQUID WAVE SHADER
-// Custom shader creating liquid distortion effect
 // ============================================================
-const LiquidWaveMaterial = {
+const LiquidShader = {
   uniforms: {
     uTime: { value: 0 },
-    uVelocity: { value: 0 },
+    uVelocity: { value: 0 }
   },
   vertexShader: `
     uniform float uTime;
     uniform float uVelocity;
     varying vec2 vUv;
-    varying float vElevation;
+    varying float vWave;
     
     void main() {
       vUv = uv;
       vec3 pos = position;
       
-      // Multiple wave layers for complex motion
-      float wave1 = sin(pos.x * 4.0 + uTime * 2.0) * 0.4;
-      float wave2 = sin(pos.y * 5.0 + uTime * 1.5) * 0.3;
-      float wave3 = sin((pos.x + pos.y) * 2.5 + uTime) * 0.2;
+      float wave1 = sin(pos.x * 3.5 + uTime * 2.5) * 0.35;
+      float wave2 = sin(pos.y * 4.5 + uTime * 2.0) * 0.25;
+      float wave3 = sin((pos.x + pos.y) * 2.0 + uTime * 1.5) * 0.2;
       
-      // Velocity amplifies waves
-      float velocityFactor = 1.0 + uVelocity * 4.0;
-      pos.z += (wave1 + wave2 + wave3) * velocityFactor;
-      
-      vElevation = pos.z;
+      float amplitude = 1.0 + uVelocity * 3.5;
+      pos.z += (wave1 + wave2 + wave3) * amplitude;
+      vWave = pos.z;
       
       gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
     }
   `,
   fragmentShader: `
     uniform float uTime;
-    uniform float uVelocity;
     varying vec2 vUv;
-    varying float vElevation;
+    varying float vWave;
     
     void main() {
-      // Gradient based on UV and elevation
-      vec3 colorA = vec3(0.024, 0.714, 0.831); // Cyan
-      vec3 colorB = vec3(0.925, 0.282, 0.600); // Pink
-      vec3 colorC = vec3(0.659, 0.224, 0.969); // Purple
+      vec3 cyan = vec3(0.133, 0.827, 0.933);
+      vec3 pink = vec3(0.925, 0.282, 0.6);
+      vec3 purple = vec3(0.659, 0.341, 0.969);
       
-      float mixFactor = vElevation + 0.5;
-      vec3 color = mix(colorA, colorB, vUv.x);
-      color = mix(color, colorC, vUv.y * 0.5 + sin(uTime) * 0.2);
-      
-      // Add shimmer
-      float shimmer = sin(vUv.x * 40.0 + uTime * 4.0) * 0.08;
-      color += shimmer;
-      
-      // Velocity adds brightness
-      color *= 1.0 + uVelocity * 0.5;
+      vec3 color = mix(cyan, pink, vUv.x);
+      color = mix(color, purple, vUv.y * 0.6 + sin(uTime * 0.5) * 0.15);
+      color += sin(vUv.x * 30.0 + uTime * 3.0) * 0.06;
+      color *= 0.9 + vWave * 0.15;
       
       gl_FragColor = vec4(color, 1.0);
     }
@@ -251,65 +163,28 @@ const LiquidWaveMaterial = {
 
 const LiquidPlane = () => {
   const meshRef = useRef();
-  const materialRef = useRef();
+  const matRef = useRef();
   const scroll = useScroll();
   const { viewport } = useThree();
-  const velocityRef = useRef(0);
+  const smoothVel = useRef(0);
 
   useFrame((state) => {
-    if (!materialRef.current) return;
-    
-    // Smooth velocity
-    velocityRef.current = THREE.MathUtils.lerp(
-      velocityRef.current,
-      Math.abs(scroll.delta) * 50,
-      0.1
-    );
-    
-    materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
-    materialRef.current.uniforms.uVelocity.value = velocityRef.current;
+    if (!matRef.current) return;
+    smoothVel.current = THREE.MathUtils.lerp(smoothVel.current, Math.abs(scroll.delta) * 40, 0.1);
+    matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    matRef.current.uniforms.uVelocity.value = smoothVel.current;
   });
 
   return (
-    <group position={[0, -viewport.height * 2.5, 0]}>
-      <mesh ref={meshRef} rotation={[-0.2, 0, 0]} scale={[7, 5, 1]}>
-        <planeGeometry args={[1, 1, 64, 64]} />
-        <shaderMaterial
-          ref={materialRef}
-          args={[LiquidWaveMaterial]}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      
-      {/* Section 3 HTML */}
-      <Html
-        center
-        position={[-viewport.width * 0.25, 1, 2]}
-        style={{
-          width: '450px',
-          pointerEvents: 'none'
-        }}
-        transform
-        distanceFactor={10}
-      >
-        <div className="content-card left" data-testid="section-liquid">
-          <div className="section-number">03</div>
-          <h1 className="title">Taxonomy III</h1>
-          <h2 className="subtitle pink">WebGL Liquid Distortion</h2>
-          <p className="description">
-            <strong>"The Texture Projection"</strong><br/>
-            Custom vertex shaders manipulate geometry based on scroll velocity 
-            (ΔP/Δt), creating fluid, organic wave patterns.
-          </p>
-        </div>
-      </Html>
-    </group>
+    <mesh ref={meshRef} position={[0, -viewport.height * 2.5, 0]} rotation={[-0.25, 0, 0]}>
+      <planeGeometry args={[8, 6, 80, 80]} />
+      <shaderMaterial ref={matRef} args={[LiquidShader]} side={THREE.DoubleSide} />
+    </mesh>
   );
 };
 
 // ============================================================
-// TAXONOMY IV: EXPLODED CUBE VIEW
-// Cube parts separate as you scroll through the section
+// TAXONOMY IV: EXPLODED CUBE
 // ============================================================
 const ExplodedCube = () => {
   const groupRef = useRef();
@@ -329,86 +204,47 @@ const ExplodedCube = () => {
   useFrame((state) => {
     if (!groupRef.current) return;
     
-    // Explosion factor based on scroll in section 4 (60-80%)
-    const explosionProgress = scroll.range(0.55, 0.25);
-    const explosionDistance = explosionProgress * 3.5;
+    // Explosion from 55% to 80%
+    const explosion = scroll.range(0.55, 0.25);
+    const dist = explosion * 4;
     
-    // Update each part
     partsRef.current.forEach((mesh, i) => {
       if (!mesh) return;
-      const part = parts[i];
+      const p = parts[i];
       mesh.position.set(
-        part.pos[0] + part.dir[0] * explosionDistance,
-        part.pos[1] + part.dir[1] * explosionDistance,
-        part.pos[2] + part.dir[2] * explosionDistance
+        p.pos[0] + p.dir[0] * dist,
+        p.pos[1] + p.dir[1] * dist,
+        p.pos[2] + p.dir[2] * dist
       );
     });
     
-    // Rotate entire group
-    groupRef.current.rotation.x = state.clock.elapsedTime * 0.15;
-    groupRef.current.rotation.y = state.clock.elapsedTime * 0.25;
+    groupRef.current.rotation.x = state.clock.elapsedTime * 0.2;
+    groupRef.current.rotation.y = state.clock.elapsedTime * 0.3;
   });
 
   return (
     <group position={[0, -viewport.height * 3.5, 0]}>
       <group ref={groupRef}>
-        {parts.map((part, i) => (
-          <mesh
-            key={i}
-            ref={el => partsRef.current[i] = el}
-            position={part.pos}
-            rotation={part.rot}
-          >
-            <boxGeometry args={[2, 0.18, 2]} />
-            <meshStandardMaterial
-              color={part.color}
-              emissive={part.color}
-              emissiveIntensity={0.3}
-              metalness={0.9}
-              roughness={0.1}
-            />
+        {parts.map((p, i) => (
+          <mesh key={i} ref={el => partsRef.current[i] = el} position={p.pos} rotation={p.rot}>
+            <boxGeometry args={[2.2, 0.2, 2.2]} />
+            <meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={0.35} metalness={0.9} roughness={0.1} />
           </mesh>
         ))}
-        
-        {/* Inner glowing core */}
-        <mesh scale={0.7}>
+        <mesh scale={0.8}>
           <icosahedronGeometry args={[1, 2]} />
-          <meshBasicMaterial color="#ffffff" wireframe />
+          <meshBasicMaterial color="#fff" wireframe />
         </mesh>
-        <pointLight intensity={3} color="#22d3ee" distance={8} />
+        <pointLight intensity={4} color="#22d3ee" distance={10} />
       </group>
-      
-      {/* Section 4 HTML */}
-      <Html
-        center
-        position={[viewport.width * 0.25, 0.5, 0]}
-        style={{
-          width: '450px',
-          pointerEvents: 'none'
-        }}
-        transform
-        distanceFactor={10}
-      >
-        <div className="content-card right" data-testid="section-exploded">
-          <div className="section-number">04</div>
-          <h1 className="title">Taxonomy IV</h1>
-          <h2 className="subtitle cyan">Exploded View</h2>
-          <p className="description">
-            <strong>"Model Deconstruction"</strong><br/>
-            Using scroll.range() to drive component separation, revealing 
-            the internal structure and engineering of a 3D object.
-          </p>
-        </div>
-      </Html>
     </group>
   );
 };
 
 // ============================================================
-// TAXONOMY V: SPHERICAL NAVIGATION / ROTATING GLOBE
-// A wireframe globe that rotates with scroll
+// TAXONOMY V: ROTATING GLOBE
 // ============================================================
-const NavigationGlobe = () => {
+const Globe = () => {
   const groupRef = useRef();
   const innerRef = useRef();
   const scroll = useScroll();
@@ -417,144 +253,149 @@ const NavigationGlobe = () => {
   useFrame((state) => {
     if (!groupRef.current) return;
     
-    // Rotation directly mapped to scroll
-    const rotationAmount = scroll.offset * Math.PI * 4;
-    groupRef.current.rotation.y = rotationAmount;
-    groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.15;
+    const rot = scroll.offset * Math.PI * 4;
+    groupRef.current.rotation.y = rot;
+    groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.3) * 0.2;
     
-    // Inner sphere counter-rotates
     if (innerRef.current) {
-      innerRef.current.rotation.y = -rotationAmount * 0.5;
-      innerRef.current.rotation.x = state.clock.elapsedTime * 0.2;
+      innerRef.current.rotation.y = -rot * 0.5;
     }
   });
 
   return (
     <group position={[0, -viewport.height * 4.5, 0]}>
       <group ref={groupRef}>
-        {/* Outer wireframe sphere */}
         <mesh>
-          <sphereGeometry args={[3, 40, 40]} />
-          <meshStandardMaterial
-            color="#7c3aed"
-            emissive="#a855f7"
-            emissiveIntensity={0.4}
-            wireframe
-          />
+          <sphereGeometry args={[3.5, 48, 48]} />
+          <meshStandardMaterial color="#7c3aed" emissive="#a855f7" emissiveIntensity={0.45} wireframe />
         </mesh>
-        
-        {/* Middle sphere */}
-        <mesh scale={0.85}>
-          <sphereGeometry args={[3, 28, 28]} />
-          <meshStandardMaterial
-            color="#8b5cf6"
-            emissive="#c084fc"
-            emissiveIntensity={0.25}
-            wireframe
-            transparent
-            opacity={0.6}
-          />
+        <mesh scale={0.8}>
+          <sphereGeometry args={[3.5, 32, 32]} />
+          <meshStandardMaterial color="#8b5cf6" emissive="#c084fc" emissiveIntensity={0.3} wireframe transparent opacity={0.5} />
         </mesh>
-        
-        {/* Inner solid sphere */}
-        <mesh ref={innerRef} scale={0.45}>
+        <mesh ref={innerRef} scale={0.4}>
           <icosahedronGeometry args={[3, 3]} />
-          <meshStandardMaterial
-            color="#c084fc"
-            emissive="#e879f9"
-            emissiveIntensity={0.6}
-            metalness={0.8}
-            roughness={0.2}
-          />
+          <meshStandardMaterial color="#c084fc" emissive="#e879f9" emissiveIntensity={0.7} metalness={0.8} roughness={0.2} />
         </mesh>
+        <pointLight intensity={5} color="#c084fc" distance={18} />
         
-        {/* Core light */}
-        <pointLight intensity={4} color="#c084fc" distance={15} />
-        
-        {/* Orbital rings */}
+        {/* Rings */}
         <mesh rotation={[Math.PI/2, 0, 0]}>
-          <torusGeometry args={[3.8, 0.025, 16, 120]} />
-          <meshBasicMaterial color="#a855f7" transparent opacity={0.8} />
+          <torusGeometry args={[4.5, 0.03, 16, 140]} />
+          <meshBasicMaterial color="#a855f7" transparent opacity={0.7} />
         </mesh>
-        <mesh rotation={[Math.PI/3, Math.PI/4, 0]}>
-          <torusGeometry args={[4.1, 0.025, 16, 120]} />
-          <meshBasicMaterial color="#8b5cf6" transparent opacity={0.6} />
+        <mesh rotation={[Math.PI/3, Math.PI/5, 0]}>
+          <torusGeometry args={[4.8, 0.03, 16, 140]} />
+          <meshBasicMaterial color="#8b5cf6" transparent opacity={0.5} />
         </mesh>
       </group>
-      
-      {/* Section 5 HTML */}
-      <Html
-        center
-        position={[0, 0, 5]}
-        style={{
-          width: '550px',
-          pointerEvents: 'auto'
-        }}
-        transform
-        distanceFactor={10}
-      >
-        <div className="content-card-center" data-testid="section-globe">
-          <div className="section-number">05</div>
-          <h1 className="title-large">Spherical Navigation</h1>
-          <p className="description-center">
-            Mapping scroll offset (0→1) directly to rotation radians (0→2π).<br/>
-            A complete rotation journey controlled by your scroll.
-          </p>
-          <button className="cta-button" data-testid="download-report-btn">
-            Download Report
-          </button>
-        </div>
-      </Html>
     </group>
   );
 };
 
 // ============================================================
-// BACKGROUND EFFECTS
-// ============================================================
-const BackgroundEffects = () => {
-  return (
-    <>
-      <Stars radius={150} depth={80} count={3000} factor={5} fade speed={0.8} />
-      <fog attach="fog" args={['#050505', 15, 120]} />
-    </>
-  );
-};
-
-// ============================================================
-// MAIN SCENE COMPOSITION
+// MAIN SCENE
 // ============================================================
 const Scene = () => {
-  const { viewport } = useThree();
-  
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={0.25} />
-      <directionalLight position={[10, 10, 5]} intensity={1.2} color="#ffffff" />
-      <pointLight position={[-15, 0, -25]} intensity={3} color="#22d3ee" />
-      <pointLight position={[15, -15, -15]} intensity={3} color="#ec4899" />
-      <pointLight position={[0, 15, -40]} intensity={2} color="#a855f7" />
+      <ambientLight intensity={0.3} />
+      <pointLight position={[-15, 10, -20]} intensity={4} color="#22d3ee" />
+      <pointLight position={[15, -10, -15]} intensity={4} color="#ec4899" />
+      <pointLight position={[0, 15, -35]} intensity={3} color="#a855f7" />
       
-      <BackgroundEffects />
+      <Stars radius={180} depth={100} count={4000} factor={5} fade speed={0.6} />
+      <fog attach="fog" args={['#050505', 20, 150]} />
       
-      <ScrollControls pages={5} damping={0.12}>
+      <ScrollControls pages={5} damping={0.1}>
         <Scroll>
-          {/* Section 1: Tunnel */}
           <ImmersiveTunnel />
-          <Section1Content />
-          
-          {/* Section 2: Velocity Morph */}
-          <VelocityMorphSphere />
-          
-          {/* Section 3: Liquid Shader */}
+          <VelocitySphere />
           <LiquidPlane />
-          
-          {/* Section 4: Exploded View */}
           <ExplodedCube />
+          <Globe />
+        </Scroll>
+        
+        <Scroll html style={{ width: '100%' }}>
+          {/* Section 1: Tunnel */}
+          <section className="scroll-section">
+            <div className="card-wrapper left">
+              <div className="glass-card" data-testid="section-tunnel">
+                <span className="section-num">01</span>
+                <h1 className="section-title">Taxonomy I</h1>
+                <h2 className="section-subtitle cyan">Pseudo-3D Tunnel</h2>
+                <p className="section-text">
+                  <strong>"The Z-Axis Zoom"</strong><br/>
+                  Flying through a tunnel of light rings. Scroll drives your journey 
+                  forward into the vanishing point, creating true depth perception.
+                </p>
+              </div>
+            </div>
+          </section>
+          
+          {/* Section 2: Velocity */}
+          <section className="scroll-section">
+            <div className="card-wrapper right">
+              <div className="glass-card" data-testid="section-velocity">
+                <span className="section-num">02</span>
+                <h1 className="section-title">Taxonomy II</h1>
+                <h2 className="section-subtitle purple">Velocity Deformation</h2>
+                <p className="section-text">
+                  <strong>"The Gelatinous Feel"</strong><br/>
+                  The sphere morphs based on your scroll speed. Fast scrolling 
+                  creates dramatic distortion—a tactile, organic response.
+                </p>
+                <span className="hint-text">↕ Scroll fast to see the effect!</span>
+              </div>
+            </div>
+          </section>
+          
+          {/* Section 3: Liquid */}
+          <section className="scroll-section">
+            <div className="card-wrapper left">
+              <div className="glass-card" data-testid="section-liquid">
+                <span className="section-num">03</span>
+                <h1 className="section-title">Taxonomy III</h1>
+                <h2 className="section-subtitle pink">WebGL Liquid Distortion</h2>
+                <p className="section-text">
+                  <strong>"The Texture Projection"</strong><br/>
+                  Custom vertex shaders manipulate geometry based on scroll velocity 
+                  (ΔP/Δt), creating fluid, organic wave patterns.
+                </p>
+              </div>
+            </div>
+          </section>
+          
+          {/* Section 4: Exploded */}
+          <section className="scroll-section">
+            <div className="card-wrapper right">
+              <div className="glass-card" data-testid="section-exploded">
+                <span className="section-num">04</span>
+                <h1 className="section-title">Taxonomy IV</h1>
+                <h2 className="section-subtitle cyan">Exploded View</h2>
+                <p className="section-text">
+                  <strong>"Model Deconstruction"</strong><br/>
+                  Using scroll.range() to drive component separation, revealing 
+                  the internal structure and engineering of a 3D object.
+                </p>
+              </div>
+            </div>
+          </section>
           
           {/* Section 5: Globe */}
-          <NavigationGlobe />
+          <section className="scroll-section center">
+            <div className="center-card" data-testid="section-globe">
+              <span className="section-num">05</span>
+              <h1 className="center-title">Spherical Navigation</h1>
+              <p className="center-text">
+                Mapping scroll offset (0→1) directly to rotation radians (0→2π).<br/>
+                A complete rotation journey controlled by your scroll.
+              </p>
+              <button className="download-btn" data-testid="download-report-btn">
+                Download Report
+              </button>
+            </div>
+          </section>
         </Scroll>
       </ScrollControls>
     </>
@@ -562,14 +403,12 @@ const Scene = () => {
 };
 
 // ============================================================
-// LOADING SCREEN
+// LOADING OVERLAY
 // ============================================================
-const LoadingScreen = () => (
-  <div className="loading-screen">
-    <div className="loading-content">
-      <div className="loading-ring"></div>
-      <div className="loading-text">Loading Experience...</div>
-    </div>
+const Loader = () => (
+  <div className="loader-overlay">
+    <div className="loader-spinner"></div>
+    <p className="loader-text">Loading Experience...</p>
   </div>
 );
 
@@ -577,22 +416,20 @@ const LoadingScreen = () => (
 // MAIN APP
 // ============================================================
 export default function App() {
-  const [loaded, setLoaded] = useState(false);
+  const [ready, setReady] = useState(false);
   
   useEffect(() => {
-    // Simulate loading time for assets
-    const timer = setTimeout(() => setLoaded(true), 1500);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setReady(true), 1200);
+    return () => clearTimeout(t);
   }, []);
 
   return (
-    <div className="app-container" data-testid="app-container">
-      {!loaded && <LoadingScreen />}
+    <div className="app-root" data-testid="app-container">
+      {!ready && <Loader />}
       
       <Canvas
-        shadows
-        camera={{ position: [0, 0, 12], fov: 50, near: 0.1, far: 250 }}
-        gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+        camera={{ position: [0, 0, 12], fov: 55, near: 0.1, far: 300 }}
+        gl={{ antialias: true, powerPreference: 'high-performance' }}
       >
         <color attach="background" args={['#050505']} />
         <Suspense fallback={null}>
@@ -600,20 +437,18 @@ export default function App() {
         </Suspense>
       </Canvas>
       
-      {/* Fixed Header */}
-      <header className="header" data-testid="header">
-        <div className="logo">
-          IMMERSIVE<span className="logo-accent">HORIZONS</span>
+      {/* Header */}
+      <header className="site-header" data-testid="header">
+        <div className="brand">
+          IMMERSIVE<span className="brand-accent">HORIZONS</span>
         </div>
-        <div className="tagline">
-          PARTIAL-3D SCROLL INTERACTION
-        </div>
+        <div className="subtitle">PARTIAL-3D SCROLL INTERACTION</div>
       </header>
       
-      {/* Scroll Indicator */}
-      <div className="scroll-indicator" data-testid="scroll-indicator">
-        <div className="scroll-text">SCROLL</div>
-        <div className="scroll-line"></div>
+      {/* Scroll Hint */}
+      <div className="scroll-hint" data-testid="scroll-indicator">
+        <span>SCROLL</span>
+        <div className="scroll-line-anim"></div>
       </div>
     </div>
   );
