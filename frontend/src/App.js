@@ -183,6 +183,171 @@ useFrame(() => {
 });`,
       explanation: 'Each card has its own Z position and speed multiplier. Adding subtle rotation on a sine wave gives the scene more life and depth.'
     }
+  ],
+  dof: [
+    {
+      title: 'Scroll-Based Focus Distance',
+      code: `// Adjust focus based on scroll position
+useFrame(() => {
+  const focus = scroll.offset * maxFocusDistance;
+  
+  objects.forEach(obj => {
+    const dist = Math.abs(obj.position.z - focus);
+    obj.material.opacity = 1 - (dist * blurFactor);
+    obj.scale.setScalar(1 - dist * 0.05);
+  });
+});`,
+      explanation: 'Calculate distance from current focus point. Objects further from focus become more transparent/smaller, simulating depth of field blur.'
+    },
+    {
+      title: 'Bokeh Particle Effect',
+      code: `// Bokeh circles scale with distance from focus
+const bokehSize = baseSize * (1 + distFromFocus * 0.5);
+const bokehOpacity = 1 / (1 + distFromFocus);
+
+particle.scale.setScalar(bokehSize);
+particle.material.opacity = bokehOpacity;`,
+      explanation: 'Out-of-focus lights become larger, softer circles (bokeh). Size increases and opacity decreases with distance from focal plane.'
+    }
+  ],
+  camerapath: [
+    {
+      title: 'Spline Camera Path',
+      code: `// Camera follows CatmullRom spline
+const curve = new CatmullRomCurve3(points);
+
+useFrame(() => {
+  const t = scroll.offset;
+  const position = curve.getPointAt(t);
+  const lookAt = curve.getPointAt(Math.min(t + 0.01, 1));
+  
+  camera.position.copy(position);
+  camera.lookAt(lookAt);
+});`,
+      explanation: 'CatmullRomCurve3 creates smooth path through points. scroll.offset (0-1) maps directly to curve parameter t. LookAt slightly ahead for smooth rotation.'
+    },
+    {
+      title: 'Orbital Camera Motion',
+      code: `// Camera orbits around center point
+useFrame(() => {
+  const angle = scroll.offset * Math.PI * 2;
+  const radius = 10;
+  
+  camera.position.x = Math.cos(angle) * radius;
+  camera.position.z = Math.sin(angle) * radius;
+  camera.lookAt(0, 0, 0);
+});`,
+      explanation: 'Polar coordinates create circular orbit. scroll.offset maps to angle (0-2π for full orbit). Camera always looks at center.'
+    }
+  ],
+  morph: [
+    {
+      title: 'Geometry Interpolation',
+      code: `// Lerp between two geometries
+useFrame(() => {
+  const t = scroll.offset;
+  
+  positions.forEach((pos, i) => {
+    pos.x = lerp(cubePos[i].x, spherePos[i].x, t);
+    pos.y = lerp(cubePos[i].y, spherePos[i].y, t);
+    pos.z = lerp(cubePos[i].z, spherePos[i].z, t);
+  });
+  geometry.attributes.position.needsUpdate = true;
+});`,
+      explanation: 'Store vertex positions for both shapes. Linear interpolation (lerp) blends between them based on scroll. Update geometry each frame.'
+    },
+    {
+      title: 'Scale-Based Morph',
+      code: `// Morph via non-uniform scaling
+useFrame(() => {
+  const t = scroll.offset;
+  
+  // Cube (1,1,1) -> Flat (2,0.1,2) -> Tall (0.5,3,0.5)
+  mesh.scale.x = lerp(1, t < 0.5 ? 2 : 0.5, t * 2);
+  mesh.scale.y = lerp(1, t < 0.5 ? 0.1 : 3, t * 2);
+});`,
+      explanation: 'Non-uniform scaling creates shape transformation illusion. Multi-stage lerp allows complex morph sequences.'
+    }
+  ],
+  reveal: [
+    {
+      title: 'Circular Reveal Mask',
+      code: `// Shader-based circle reveal
+uniform float uProgress;
+varying vec2 vUv;
+
+void main() {
+  vec2 center = vec2(0.5);
+  float dist = distance(vUv, center);
+  float radius = uProgress * 0.75;
+  
+  if (dist > radius) discard;
+  gl_FragColor = texture2D(uTexture, vUv);
+}`,
+      explanation: 'Fragment shader discards pixels outside radius. uProgress (from scroll) expands the circle. Creates iris/portal reveal effect.'
+    },
+    {
+      title: 'Directional Wipe',
+      code: `// Horizontal wipe reveal
+useFrame(() => {
+  const t = scroll.offset;
+  
+  // Move clip plane based on scroll
+  mesh.material.clippingPlanes = [
+    new Plane(new Vector3(1, 0, 0), -10 + t * 20)
+  ];
+});`,
+      explanation: 'Three.js clipping planes cut geometry. Moving plane position with scroll creates wipe effect. Direction vector controls wipe angle.'
+    }
+  ],
+  uvscroll: [
+    {
+      title: 'UV Offset Animation',
+      code: `// Scroll texture coordinates
+useFrame(() => {
+  const offset = scroll.offset * scrollSpeed;
+  
+  mesh.material.map.offset.x = offset;
+  // Or for vertical: map.offset.y = offset;
+  
+  mesh.material.map.needsUpdate = true;
+});`,
+      explanation: 'Texture.offset shifts UV coordinates. Scroll drives the offset for synchronized movement. Works with repeating textures for infinite scroll.'
+    },
+    {
+      title: 'Shader UV Distortion',
+      code: `// Wavy UV distortion in shader
+vec2 distortedUV = vUv;
+distortedUV.x += sin(vUv.y * 10.0 + uScroll * 5.0) * 0.1;
+distortedUV.y += cos(vUv.x * 10.0 + uScroll * 3.0) * 0.1;
+
+vec4 color = texture2D(uTexture, distortedUV);`,
+      explanation: 'Sine/cosine waves distort UV lookup. Scroll offset animates the phase. Creates liquid/heat wave effect on textures.'
+    }
+  ],
+  orbit: [
+    {
+      title: 'Combined Orbit + Scroll Zoom',
+      code: `// Mouse orbit with scroll zoom
+useFrame(() => {
+  // Orbit from mouse (via OrbitControls)
+  // Zoom from scroll
+  const zoom = 5 + scroll.offset * 15;
+  camera.position.normalize().multiplyScalar(zoom);
+});`,
+      explanation: 'OrbitControls handles rotation via mouse drag. Scroll independently controls camera distance (zoom). Separates two interaction types.'
+    },
+    {
+      title: 'Auto-Orbit with Scroll Speed',
+      code: `// Rotation speed based on scroll velocity
+useFrame(() => {
+  const baseSpeed = 0.5;
+  const scrollBoost = scroll.delta * 20;
+  
+  group.rotation.y += (baseSpeed + scrollBoost) * delta;
+});`,
+      explanation: 'Continuous rotation at base speed. Scroll velocity (delta) adds temporary boost. Creates responsive, dynamic orbit feel.'
+    }
   ]
 };
 
