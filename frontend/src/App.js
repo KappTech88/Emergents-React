@@ -1620,6 +1620,30 @@ const ANIMATIONS = {
   parallax: [
     { name: 'Floating Cards', component: FloatingCards, description: 'Cards at different depths move at different speeds' },
     { name: 'Mountain Layers', component: MountainLayers, description: 'Layered landscape with depth parallax' }
+  ],
+  dof: [
+    { name: 'Focus Pull', component: FocusPull, description: 'Objects blur based on distance from focus point' },
+    { name: 'Bokeh Particles', component: BokehParticles, description: 'Out-of-focus lights become soft circles' }
+  ],
+  camerapath: [
+    { name: 'Spline Camera', component: SplineCamera, description: 'Camera follows a curved path through space' },
+    { name: 'Orbit Path', component: OrbitPath, description: 'Camera orbits around central object' }
+  ],
+  morph: [
+    { name: 'Shape Morph', component: ShapeMorph, description: 'Geometry transforms through multiple shapes' },
+    { name: 'Blob Morph', component: BlobMorph, description: 'Organic distortion morphing with scroll' }
+  ],
+  reveal: [
+    { name: 'Circle Reveal', component: CircleReveal, description: 'Content reveals through expanding circle' },
+    { name: 'Wipe Reveal', component: WipeReveal, description: 'Horizontal wipe reveals content bars' }
+  ],
+  uvscroll: [
+    { name: 'Grid Scroll', component: GridScroll, description: 'Scrolling grid pattern effect' },
+    { name: 'Wave UV Distortion', component: WaveUVDistortion, description: 'Wavy distortion on UV coordinates' }
+  ],
+  orbit: [
+    { name: 'Zoom Orbit', component: ZoomOrbit, description: 'Auto rotation with scroll-based zoom' },
+    { name: 'Speed Orbit', component: SpeedOrbit, description: 'Rotation speed based on scroll velocity' }
   ]
 };
 
