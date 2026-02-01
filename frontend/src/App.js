@@ -41,6 +41,7 @@ const HeroObject = () => {
 const ParallaxShapes = () => {
   const group = useRef();
   const scroll = useScroll();
+  const { viewport } = useThree();
 
   useFrame(() => {
     // Visible during second section
@@ -49,9 +50,6 @@ const ParallaxShapes = () => {
         group.current.position.y = -viewport.height * 1 + (scroll.range(1/5, 1/5) * 5);
     }
   });
-
-  // Access viewport for positioning
-  const { viewport } = useThree();
 
   return (
     <group ref={group} position={[0, -viewport.height, 0]}>
