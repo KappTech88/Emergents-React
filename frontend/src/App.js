@@ -19,6 +19,12 @@ const CATEGORIES = [
   { id: 'exploded', name: 'Exploded Views', icon: '❖', description: 'Component separation' },
   { id: 'rotation', name: 'Rotation Mapping', icon: '◐', description: 'Scroll-to-rotation' },
   { id: 'parallax', name: 'Parallax Layers', icon: '☰', description: 'Depth layer movement' },
+  { id: 'dof', name: 'Depth of Field', icon: '◯', description: 'Focus & blur effects' },
+  { id: 'camerapath', name: 'Camera Path', icon: '↝', description: 'Camera follows spline' },
+  { id: 'morph', name: 'Morph Targets', icon: '⬡', description: 'Shape transformation' },
+  { id: 'reveal', name: 'Reveal Effects', icon: '◧', description: 'Content reveal/mask' },
+  { id: 'uvscroll', name: 'Texture Scroll', icon: '≋', description: 'UV coordinate animation' },
+  { id: 'orbit', name: 'Orbit Controls', icon: '↻', description: 'Interactive + scroll' },
 ];
 
 // ============================================================
