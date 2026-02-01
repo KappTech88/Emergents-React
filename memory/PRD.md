@@ -1,98 +1,98 @@
-# Immersive Horizons - 3D Scroll Effects Demo
+# Immersive Horizons - 3D Scroll Effects Showcase
 
 ## Original Problem Statement
-Create a single-page React application that demonstrates various 3D effects as the user scrolls down the page. The name of each effect should be listed as it is being displayed. The implementation should be based on the user's provided technical research document "Immersive Horizons: The Engineering and Aesthetics of Partial-3D Scroll Interactions in React."
+Create a tabbed application showcasing different types of 3D scroll effects. Each animation category should have its own dedicated page with 2 examples of that animation type, allowing users to explore effects without them being "bogged down by others."
 
 ## Project Overview
-A WebGL-powered scroll experience showcasing 5 different 3D scroll interaction taxonomies using React Three Fiber and custom shaders.
+A WebGL-powered showcase app demonstrating 6 categories of 3D scroll interaction patterns using React Three Fiber, with 2 examples per category (12 total animations).
 
 ## Tech Stack
 - **Frontend**: React 18.3.1
 - **3D Rendering**: @react-three/fiber 8.16.8
 - **3D Helpers**: @react-three/drei 9.108.3
 - **3D Core**: Three.js 0.166.1
-- **Animation**: GSAP 3.12.5
 - **Styling**: Tailwind CSS 3.4.4
 
-## Implemented Features (as of Feb 1, 2026)
+## App Structure
+```
+┌─────────────────────────────────────────────────────┐
+│  Sidebar        │        Main Content               │
+│  Navigation     │  ┌─────────────────────────────┐  │
+│                 │  │  Example Tabs               │  │
+│  ◎ Tunnel       │  └─────────────────────────────┘  │
+│  ◉ Velocity     │  ┌─────────────────────────────┐  │
+│  ◈ Shader       │  │                             │  │
+│  ❖ Exploded     │  │      3D Canvas              │  │
+│  ◐ Rotation     │  │                             │  │
+│  ☰ Parallax     │  │  ┌─────────────────────┐    │  │
+│                 │  │  │    Info Panel       │    │  │
+│                 │  │  └─────────────────────┘    │  │
+│                 │  └─────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
 
-### ✅ Section 1: Pseudo-3D Tunnel
-- **Effect**: "The Z-Axis Zoom"
-- **Implementation**: 60 concentric torus rings creating depth illusion
-- **Interaction**: Scroll drives camera through tunnel toward vanishing point
-- **Colors**: Cyan gradient rings with emissive materials
+## Implemented Categories & Animations (Feb 1, 2026)
 
-### ✅ Section 2: Velocity Deformation
-- **Effect**: "The Gelatinous Feel"
-- **Implementation**: MeshDistortMaterial on icosahedron geometry
-- **Interaction**: Sphere morphs/distorts based on scroll velocity
-- **Colors**: Purple with violet emissive glow
+### 1. Tunnel Effects (Z-Axis Depth)
+- **Ring Tunnel**: 50 concentric torus rings, scroll drives camera forward
+- **Particle Starfield**: 2000 particles in warp formation
 
-### ✅ Section 3: WebGL Liquid Distortion
-- **Effect**: "The Texture Projection"
-- **Implementation**: Custom vertex/fragment shader
-- **Interaction**: Wave amplitude increases with scroll velocity (ΔP/Δt)
-- **Colors**: Cyan-pink-purple gradient waves
+### 2. Velocity Deformation (Speed-Reactive)
+- **Morphing Sphere**: MeshDistortMaterial icosahedron, distort based on velocity
+- **Wobbling Torus Knot**: MeshWobbleMaterial torus knot, wobble factor from velocity
 
-### ✅ Section 4: Exploded View
-- **Effect**: "Model Deconstruction"
-- **Implementation**: 6 box geometries with wireframe core
-- **Interaction**: scroll.range() drives separation distance
-- **Colors**: Cyan metallic plates
+### 3. Shader Effects (Custom WebGL)
+- **Liquid Waves**: Custom vertex shader with sine waves, cyan-pink gradient
+- **Noise Displacement**: Procedural noise displaces sphere vertices
 
-### ✅ Section 5: Spherical Navigation
-- **Effect**: "Direct Rotation Mapping"
-- **Implementation**: Multi-layer wireframe spheres with orbital rings
-- **Interaction**: Scroll offset (0→1) maps to rotation radians (0→2π)
-- **Colors**: Purple/violet gradient with emissive core
+### 4. Exploded Views (Component Separation)
+- **Exploded Cube**: 6 box faces separate on scroll.range()
+- **Exploded Icosahedron**: 20 tetrahedrons separate radially
 
-### ✅ UI Components
-- Fixed header with "IMMERSIVEHORIZONS" branding
-- Scroll indicator with animation
-- Glass-morphism text cards for each section
-- Download Report CTA button
-- Responsive design (mobile/tablet/desktop)
+### 5. Rotation Mapping (Scroll-to-Rotation)
+- **Wireframe Globe**: Multi-layer spheres with orbital rings, offset→radians
+- **DNA Helix**: 30-point double helix rotates with scroll
+
+### 6. Parallax Layers (Depth Movement)
+- **Floating Cards**: 6 cards at different Z depths, different parallax speeds
+- **Mountain Layers**: 5 layered planes simulating mountain landscape
 
 ## Testing Status
-- **Frontend Testing**: 100% PASS (verified Feb 1, 2026)
-- **Responsive Testing**: PASS (390px, 768px, 1920px viewports)
-- **Scroll Interactions**: PASS (bidirectional scroll works)
+- **Frontend Testing**: 100% PASS (iteration_2.json)
+- **All 12 animations**: Working
+- **Category switching**: Working
+- **Example tabs**: Working
+- **Scroll interactions**: Working (mouse wheel)
+- **Responsive design**: Working (mobile/tablet/desktop)
 
 ## File Structure
 ```
 /app/frontend/src/
-├── App.js          # Main component (all 3D effects)
-├── index.css       # Global styles + glass-morphism
+├── App.js          # Main app with all 12 animations
+├── index.css       # Sidebar layout + responsive styles
 └── index.js        # React entry point
 ```
 
 ## Key Technical Notes
-1. Uses `@react-three/drei` ScrollControls with virtual scroll
-2. Mouse wheel events trigger scroll (not window.scrollTo)
-3. Custom GLSL shaders for liquid effect
-4. MeshDistortMaterial for velocity-responsive deformation
-5. Stars background with fog for depth
+1. Uses `@react-three/drei` ScrollControls with 3 pages per animation
+2. Canvas key changes on category/example change to reset scroll state
+3. Each animation uses scroll.range() or scroll.offset for interactions
+4. MeshDistortMaterial and MeshWobbleMaterial from drei for velocity effects
+5. Custom GLSL shaders for liquid and noise effects
 
 ## Completed Tasks
-- [x] Initial setup with React Three Fiber
-- [x] Design system with CSS variables
-- [x] Tunnel effect with 60 concentric rings
-- [x] Velocity sphere with MeshDistortMaterial
-- [x] Custom WebGL shader for liquid waves
-- [x] Exploded cube with 6 separating parts
-- [x] Rotating globe with orbital rings
-- [x] HTML text cards synchronized with scroll
+- [x] Tabbed app structure with sidebar
+- [x] 6 animation categories
+- [x] 12 total animations (2 per category)
+- [x] Info panel with animation descriptions
 - [x] Responsive design
-- [x] Testing passed
+- [x] Testing passed 100%
 
 ## Future/Backlog Tasks
-- [ ] Add actual PDF download for "Download Report" button
-- [ ] Add more complex animations (GSAP timeline effects)
-- [ ] Add touch gesture support for mobile
-- [ ] Performance optimization for low-end devices
-- [ ] Add audio/sound effects option
-- [ ] Add fullscreen mode
-
-## Known Limitations
-- Post-processing effects removed due to React version peer dependency conflict
-- Virtual scroll requires mouse wheel (JS scrollTo doesn't work)
+- [ ] Add more examples per category
+- [ ] Add code snippets/documentation view
+- [ ] Add animation customization controls (speed, colors)
+- [ ] Add ability to download animation as video/GIF
+- [ ] Add dark/light theme toggle
+- [ ] Add sound/audio option
+- [ ] Add comparison mode (side-by-side animations)
