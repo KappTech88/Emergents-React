@@ -403,6 +403,13 @@ const Scene = () => {
               </button>
             </div>
           </section>
+          
+          {/* Extra scroll space for globe animation */}
+          <section className="scroll-section center">
+            <div style={{ opacity: 0 }}>
+              {/* Invisible spacer to allow continued globe rotation */}
+            </div>
+          </section>
         </Scroll>
       </ScrollControls>
     </>
