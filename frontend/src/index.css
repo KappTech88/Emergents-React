@@ -2,62 +2,397 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    /* Base Colors - Dark Future Theme */
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+/* ============================================
+   CSS VARIABLES / DESIGN TOKENS
+   ============================================ */
+:root {
+  /* Colors */
+  --color-bg: #050505;
+  --color-bg-card: rgba(0, 0, 0, 0.7);
+  --color-text: #ffffff;
+  --color-text-muted: #a1a1aa;
+  
+  /* Accent Colors */
+  --color-cyan: #22d3ee;
+  --color-purple: #a855f7;
+  --color-pink: #ec4899;
+  --color-blue: #3b82f6;
+  
+  /* Spacing */
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 4rem;
+  
+  /* Typography */
+  --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-    /* Neon Cyan */
-    --primary: 190 100% 50%;
-    --primary-foreground: 240 5.9% 10%;
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-display);
+  overflow-x: hidden;
+}
 
-    /* Neon Purple */
-    --secondary: 270 100% 60%;
-    --secondary-foreground: 0 0% 98%;
+/* ============================================
+   APP CONTAINER
+   ============================================ */
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+/* ============================================
+   HEADER
+   ============================================ */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2.5rem;
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+.logo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: white;
+}
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+.logo-accent {
+  color: var(--color-cyan);
+}
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 190 100% 50%; /* Primary color ring */
+.tagline {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  color: var(--color-text-muted);
+}
 
-    --radius: 0.5rem;
+/* ============================================
+   SCROLL INDICATOR
+   ============================================ */
+.scroll-indicator {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 100;
+  pointer-events: none;
+  animation: fadeInUp 1s ease-out 0.5s both;
+}
 
-    /* Custom Gradients */
-    --gradient-cyber: linear-gradient(135deg, hsl(190, 100%, 50%), hsl(270, 100%, 60%));
-    --gradient-dark: linear-gradient(to bottom, hsl(240, 10%, 4%), hsl(240, 10%, 10%));
+.scroll-text {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: var(--color-text-muted);
+}
+
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--color-cyan), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
+@keyframes scrollPulse {
+  0%, 100% {
+    transform: scaleY(1);
+    opacity: 0.5;
   }
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+  50% {
+    transform: scaleY(1.2);
+    opacity: 1;
   }
 }
 
-/* Scrollbar hiding for immersive feel if needed */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+/* ============================================
+   SECTIONS
+   ============================================ */
+.section {
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  position: relative;
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+.section.center {
+  justify-content: center;
+}
+
+/* ============================================
+   CONTENT CARDS
+   ============================================ */
+.content-card {
+  background: var(--color-bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 2.5rem;
+  max-width: 480px;
+  position: relative;
+  animation: fadeIn 0.8s ease-out;
+}
+
+.content-card.left {
+  margin-left: 5%;
+  border-left: 3px solid var(--color-cyan);
+}
+
+.content-card.right {
+  margin-left: auto;
+  margin-right: 5%;
+  border-right: 3px solid var(--color-purple);
+  text-align: right;
+}
+
+.content-card-center {
+  background: var(--color-bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+  padding: 3.5rem 4rem;
+  text-align: center;
+  max-width: 550px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+.section-number {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.75rem;
+  opacity: 0.6;
+}
+
+.title {
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.title-large {
+  font-size: 3.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #fff 0%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-size: 1.4rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+.subtitle.cyan {
+  color: var(--color-cyan);
+}
+
+.subtitle.purple {
+  color: var(--color-purple);
+}
+
+.subtitle.pink {
+  color: var(--color-pink);
+}
+
+.description {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+
+.description strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.description-center {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+  margin-bottom: 2rem;
+}
+
+.hint {
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-purple);
+  opacity: 0.8;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.cta-button {
+  pointer-events: auto;
+  padding: 1rem 2.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--color-cyan) 0%, var(--color-purple) 100%);
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(34, 211, 238, 0.3);
+}
+
+.cta-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 30px rgba(168, 85, 247, 0.4);
+}
+
+.cta-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .logo {
+    font-size: 0.9rem;
+  }
+  
+  .tagline {
+    display: none;
+  }
+  
+  .content-card {
+    max-width: 90%;
+    padding: 1.5rem;
+    margin-left: 5% !important;
+    margin-right: 5% !important;
+  }
+  
+  .content-card.right {
+    text-align: left;
+    border-right: none;
+    border-left: 3px solid var(--color-purple);
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
+  
+  .title-large {
+    font-size: 2.5rem;
+  }
+  
+  .subtitle {
+    font-size: 1.1rem;
+  }
+  
+  .description {
+    font-size: 0.9rem;
+  }
+  
+  .content-card-center {
+    padding: 2rem;
+    margin: 0 1rem;
+  }
+}
+
+/* ============================================
+   CUSTOM SCROLLBAR
+   ============================================ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-cyan);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-purple);
+}
+
+/* ============================================
+   SELECTION
+   ============================================ */
+::selection {
+  background: var(--color-cyan);
+  color: var(--color-bg);
+}
+
+/* ============================================
+   CANVAS STYLING
+   ============================================ */
+canvas {
+  display: block;
 }
