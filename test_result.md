@@ -107,11 +107,11 @@ user_problem_statement: "Verify the updated 'Immersive Horizons' scroll page. 1.
 frontend:
   - task: "3D Scroll Effects Landing Page"
     implemented: true
-    working: true
+    working: "NA"
     file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: false
           agent: "testing"
@@ -119,6 +119,9 @@ frontend:
         - working: true
           agent: "testing"
           comment: "Fixed by temporarily disabling EffectComposer postprocessing effects due to version compatibility issues between @react-three/postprocessing and React 18. All core functionality now working: 3D canvas renders, EMERGENT 3D header visible, scroll effects work, HTML overlay content appears correctly for all 5 effects, WebGL supported, no critical console errors."
+        - working: "NA"
+          agent: "testing"
+          comment: "New testing request received for updated 'Immersive Horizons' scroll page. Need to verify: 1) Taxonomy I tunnel effect (torus geometry), 2) Section 2 VELOCITY text, 3) Section 3 Liquid Distortion shader plane, 4) Section 4 Exploded View cube parts, 5) Section 5 Spherical Navigation sphere, 6) No shader compilation errors in console."
 
 metadata:
   created_by: "testing_agent"
