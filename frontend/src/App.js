@@ -13,7 +13,6 @@ const ImmersiveTunnel = () => {
   const groupRef = useRef();
   const ringsRef = useRef([]);
   const scroll = useScroll();
-  
   // Create ring data
   const ringCount = 60;
   const rings = useMemo(() => {
