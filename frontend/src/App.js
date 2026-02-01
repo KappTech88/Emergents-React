@@ -392,7 +392,13 @@ const Scene = () => {
                 Mapping scroll offset (0→1) directly to rotation radians (0→2π).<br/>
                 A complete rotation journey controlled by your scroll.
               </p>
-              <button className="download-btn" data-testid="download-report-btn">
+              <button 
+                className="download-btn" 
+                data-testid="download-report-btn"
+                onClick={() => {
+                  alert('Thank you for exploring Immersive Horizons!\n\nThis demo showcases 5 partial-3D scroll interaction taxonomies.');
+                }}
+              >
                 Download Report
               </button>
             </div>
