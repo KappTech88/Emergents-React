@@ -1,197 +1,275 @@
-import React, { Suspense, useRef, useMemo, useEffect, useState } from 'react';
+import React, { Suspense, useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { ScrollControls, Scroll, useScroll, Stars, MeshDistortMaterial, Float } from '@react-three/drei';
+import { ScrollControls, Scroll, useScroll, Stars, MeshDistortMaterial, Float, MeshWobbleMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Note: This app demonstrates 5 scroll-driven 3D effects from the "Immersive Horizons" research document
+// ============================================================
+// ANIMATION CATEGORIES DATA
+// ============================================================
+const CATEGORIES = [
+  { id: 'tunnel', name: 'Tunnel Effects', icon: '◎', description: 'Z-Axis depth perception' },
+  { id: 'velocity', name: 'Velocity Deformation', icon: '◉', description: 'Speed-reactive morphing' },
+  { id: 'shader', name: 'Shader Effects', icon: '◈', description: 'Custom WebGL shaders' },
+  { id: 'exploded', name: 'Exploded Views', icon: '❖', description: 'Component separation' },
+  { id: 'rotation', name: 'Rotation Mapping', icon: '◐', description: 'Scroll-to-rotation' },
+  { id: 'parallax', name: 'Parallax Layers', icon: '☰', description: 'Depth layer movement' },
+];
 
 // ============================================================
-// TAXONOMY I: IMMERSIVE TUNNEL EFFECT
-// Flying through concentric rings as you scroll
+// TUNNEL EFFECTS
 // ============================================================
-const ImmersiveTunnel = () => {
+
+// Example 1: Ring Tunnel
+const RingTunnel = () => {
   const groupRef = useRef();
   const ringsRef = useRef([]);
   const scroll = useScroll();
-  // Create ring data
-  const ringCount = 60;
-  const rings = useMemo(() => {
-    return new Array(ringCount).fill(0).map((_, i) => ({
-      z: -i * 2,
-      baseScale: 3 + Math.sin(i * 0.2) * 0.5,
-      rotationSpeed: (i % 2 === 0 ? 1 : -1) * (0.3 + i * 0.02),
-      hue: 180 + i * 2.5,
-      opacity: Math.max(0.2, 1 - i * 0.015)
-    }));
-  }, []);
+  
+  const rings = useMemo(() => 
+    new Array(50).fill(0).map((_, i) => ({
+      z: -i * 2.5,
+      hue: 180 + i * 3,
+      opacity: Math.max(0.15, 1 - i * 0.018)
+    })), []);
 
   useFrame((state) => {
     if (!groupRef.current) return;
-    
-    // First 20% of scroll moves through tunnel
-    const progress = scroll.range(0, 0.2);
+    const progress = scroll.range(0, 0.5);
     groupRef.current.position.z = progress * 100;
     
-    // Rotate individual rings
     ringsRef.current.forEach((ring, i) => {
-      if (ring) {
-        ring.rotation.z = state.clock.elapsedTime * rings[i].rotationSpeed * 0.1;
-      }
+      if (ring) ring.rotation.z = state.clock.elapsedTime * (i % 2 ? 0.1 : -0.1);
     });
   });
 
   return (
     <group ref={groupRef}>
       {rings.map((ring, i) => (
-        <mesh 
-          key={`ring-${i}`} 
-          ref={el => ringsRef.current[i] = el}
-          position={[0, 0, ring.z]}
-        >
-          <torusGeometry args={[ring.baseScale, 0.03, 8, 100]} />
-          <meshBasicMaterial
-            color={`hsl(${ring.hue}, 85%, 55%)`}
-            transparent
-            opacity={ring.opacity}
-            side={THREE.DoubleSide}
-          />
+        <mesh key={i} ref={el => ringsRef.current[i] = el} position={[0, 0, ring.z]}>
+          <torusGeometry args={[3.5, 0.04, 8, 80]} />
+          <meshBasicMaterial color={`hsl(${ring.hue}, 80%, 55%)`} transparent opacity={ring.opacity} />
         </mesh>
       ))}
-      
-      {/* Light at end of tunnel */}
-      <mesh position={[0, 0, -120]}>
-        <sphereGeometry args={[1.5, 32, 32]} />
-        <meshBasicMaterial color="#22d3ee" />
-      </mesh>
-      <pointLight position={[0, 0, -120]} intensity={10} color="#22d3ee" distance={150} />
+      <pointLight position={[0, 0, -100]} intensity={8} color="#22d3ee" distance={120} />
     </group>
   );
 };
 
+// Example 2: Particle Tunnel / Starfield
+const ParticleTunnel = () => {
+  const pointsRef = useRef();
+  const scroll = useScroll();
+  
+  const particles = useMemo(() => {
+    const positions = new Float32Array(2000 * 3);
+    const colors = new Float32Array(2000 * 3);
+    
+    for (let i = 0; i < 2000; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 2 + Math.random() * 4;
+      positions[i * 3] = Math.cos(angle) * radius;
+      positions[i * 3 + 1] = Math.sin(angle) * radius;
+      positions[i * 3 + 2] = -Math.random() * 150;
+      
+      const color = new THREE.Color(`hsl(${180 + Math.random() * 60}, 80%, 60%)`);
+      colors[i * 3] = color.r;
+      colors[i * 3 + 1] = color.g;
+      colors[i * 3 + 2] = color.b;
+    }
+    return { positions, colors };
+  }, []);
+
+  useFrame(() => {
+    if (!pointsRef.current) return;
+    const progress = scroll.range(0, 0.5);
+    pointsRef.current.position.z = progress * 120;
+  });
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" count={2000} array={particles.positions} itemSize={3} />
+        <bufferAttribute attach="attributes-color" count={2000} array={particles.colors} itemSize={3} />
+      </bufferGeometry>
+      <pointsMaterial size={0.08} vertexColors transparent opacity={0.9} sizeAttenuation />
+    </points>
+  );
+};
+
 // ============================================================
-// TAXONOMY II: VELOCITY MORPHING SPHERE
+// VELOCITY DEFORMATION
 // ============================================================
-const VelocitySphere = () => {
+
+// Example 1: Morphing Sphere
+const MorphingSphere = () => {
   const meshRef = useRef();
   const scroll = useScroll();
-  const { viewport } = useThree();
-  const smoothVelocity = useRef(0);
+  const velocity = useRef(0);
 
   useFrame((state) => {
     if (!meshRef.current) return;
+    velocity.current = THREE.MathUtils.lerp(velocity.current, Math.abs(scroll.delta) * 80, 0.08);
     
-    // Track velocity smoothly
-    const targetVel = Math.abs(scroll.delta) * 80;
-    smoothVelocity.current = THREE.MathUtils.lerp(smoothVelocity.current, targetVel, 0.08);
-    
-    // Animate rotation
     meshRef.current.rotation.x = state.clock.elapsedTime * 0.4;
     meshRef.current.rotation.y = state.clock.elapsedTime * 0.6;
     
-    // Update distortion based on velocity
     if (meshRef.current.material) {
-      meshRef.current.material.distort = 0.2 + Math.min(smoothVelocity.current * 0.4, 0.8);
-      meshRef.current.material.speed = 1.5 + smoothVelocity.current * 2;
+      meshRef.current.material.distort = 0.2 + Math.min(velocity.current * 0.5, 0.8);
     }
   });
 
   return (
-    <Float speed={1.5} rotationIntensity={0.3} floatIntensity={0.8}>
-      <mesh ref={meshRef} position={[0, -viewport.height * 1.5, 0]} scale={2.8}>
+    <Float speed={1.5} rotationIntensity={0.3}>
+      <mesh ref={meshRef} scale={2.5}>
         <icosahedronGeometry args={[1, 8]} />
-        <MeshDistortMaterial
-          color="#a855f7"
-          emissive="#7c3aed"
-          emissiveIntensity={0.5}
-          roughness={0.15}
-          metalness={0.85}
-          distort={0.3}
-          speed={2}
-        />
+        <MeshDistortMaterial color="#a855f7" emissive="#7c3aed" emissiveIntensity={0.5} roughness={0.15} metalness={0.85} distort={0.3} speed={2} />
+      </mesh>
+    </Float>
+  );
+};
+
+// Example 2: Wobbling Torus
+const WobblingTorus = () => {
+  const meshRef = useRef();
+  const scroll = useScroll();
+  const velocity = useRef(0);
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    velocity.current = THREE.MathUtils.lerp(velocity.current, Math.abs(scroll.delta) * 60, 0.1);
+    
+    meshRef.current.rotation.x = state.clock.elapsedTime * 0.3;
+    meshRef.current.rotation.y = state.clock.elapsedTime * 0.5;
+    
+    if (meshRef.current.material) {
+      meshRef.current.material.factor = 0.5 + velocity.current * 0.8;
+    }
+  });
+
+  return (
+    <Float speed={2} rotationIntensity={0.4}>
+      <mesh ref={meshRef} scale={2}>
+        <torusKnotGeometry args={[1, 0.35, 128, 32]} />
+        <MeshWobbleMaterial color="#ec4899" emissive="#be185d" emissiveIntensity={0.4} factor={0.5} speed={2} />
       </mesh>
     </Float>
   );
 };
 
 // ============================================================
-// TAXONOMY III: LIQUID WAVE SHADER
+// SHADER EFFECTS
 // ============================================================
+
 const LiquidShader = {
-  uniforms: {
-    uTime: { value: 0 },
-    uVelocity: { value: 0 }
-  },
+  uniforms: { uTime: { value: 0 }, uVelocity: { value: 0 } },
   vertexShader: `
-    uniform float uTime;
-    uniform float uVelocity;
-    varying vec2 vUv;
-    varying float vWave;
-    
+    uniform float uTime; uniform float uVelocity;
+    varying vec2 vUv; varying float vWave;
     void main() {
       vUv = uv;
       vec3 pos = position;
-      
-      float wave1 = sin(pos.x * 3.5 + uTime * 2.5) * 0.35;
-      float wave2 = sin(pos.y * 4.5 + uTime * 2.0) * 0.25;
-      float wave3 = sin((pos.x + pos.y) * 2.0 + uTime * 1.5) * 0.2;
-      
-      float amplitude = 1.0 + uVelocity * 3.5;
-      pos.z += (wave1 + wave2 + wave3) * amplitude;
+      float wave = sin(pos.x * 3.5 + uTime * 2.5) * 0.35 + sin(pos.y * 4.5 + uTime * 2.0) * 0.25;
+      pos.z += wave * (1.0 + uVelocity * 3.5);
       vWave = pos.z;
-      
       gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
     }
   `,
   fragmentShader: `
-    uniform float uTime;
-    varying vec2 vUv;
-    varying float vWave;
-    
+    uniform float uTime; varying vec2 vUv; varying float vWave;
     void main() {
       vec3 cyan = vec3(0.133, 0.827, 0.933);
       vec3 pink = vec3(0.925, 0.282, 0.6);
-      vec3 purple = vec3(0.659, 0.341, 0.969);
-      
-      vec3 color = mix(cyan, pink, vUv.x);
-      color = mix(color, purple, vUv.y * 0.6 + sin(uTime * 0.5) * 0.15);
-      color += sin(vUv.x * 30.0 + uTime * 3.0) * 0.06;
+      vec3 color = mix(cyan, pink, vUv.x + sin(uTime * 0.5) * 0.15);
       color *= 0.9 + vWave * 0.15;
-      
       gl_FragColor = vec4(color, 1.0);
     }
   `
 };
 
+const NoiseShader = {
+  uniforms: { uTime: { value: 0 }, uVelocity: { value: 0 } },
+  vertexShader: `
+    uniform float uTime; uniform float uVelocity;
+    varying vec2 vUv; varying float vDisplacement;
+    
+    float noise(vec3 p) {
+      return fract(sin(dot(p, vec3(12.9898, 78.233, 45.5432))) * 43758.5453);
+    }
+    
+    void main() {
+      vUv = uv;
+      vec3 pos = position;
+      float n = noise(pos * 2.0 + uTime * 0.5);
+      float displacement = n * (0.3 + uVelocity * 0.8);
+      pos += normal * displacement;
+      vDisplacement = displacement;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float uTime; varying vec2 vUv; varying float vDisplacement;
+    void main() {
+      vec3 purple = vec3(0.659, 0.341, 0.969);
+      vec3 orange = vec3(0.969, 0.533, 0.133);
+      vec3 color = mix(purple, orange, vDisplacement * 2.0 + sin(uTime) * 0.2);
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `
+};
+
+// Example 1: Liquid Plane
 const LiquidPlane = () => {
-  const meshRef = useRef();
   const matRef = useRef();
   const scroll = useScroll();
-  const { viewport } = useThree();
-  const smoothVel = useRef(0);
+  const vel = useRef(0);
 
   useFrame((state) => {
     if (!matRef.current) return;
-    smoothVel.current = THREE.MathUtils.lerp(smoothVel.current, Math.abs(scroll.delta) * 40, 0.1);
+    vel.current = THREE.MathUtils.lerp(vel.current, Math.abs(scroll.delta) * 40, 0.1);
     matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
-    matRef.current.uniforms.uVelocity.value = smoothVel.current;
+    matRef.current.uniforms.uVelocity.value = vel.current;
   });
 
   return (
-    <mesh ref={meshRef} position={[0, -viewport.height * 2.5, 0]} rotation={[-0.25, 0, 0]}>
+    <mesh rotation={[-0.3, 0, 0]}>
       <planeGeometry args={[8, 6, 80, 80]} />
       <shaderMaterial ref={matRef} args={[LiquidShader]} side={THREE.DoubleSide} />
     </mesh>
   );
 };
 
+// Example 2: Noise Sphere
+const NoiseSphere = () => {
+  const matRef = useRef();
+  const meshRef = useRef();
+  const scroll = useScroll();
+  const vel = useRef(0);
+
+  useFrame((state) => {
+    if (!matRef.current || !meshRef.current) return;
+    vel.current = THREE.MathUtils.lerp(vel.current, Math.abs(scroll.delta) * 40, 0.1);
+    matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    matRef.current.uniforms.uVelocity.value = vel.current;
+    meshRef.current.rotation.y = state.clock.elapsedTime * 0.2;
+  });
+
+  return (
+    <mesh ref={meshRef} scale={2.5}>
+      <icosahedronGeometry args={[1, 32]} />
+      <shaderMaterial ref={matRef} args={[NoiseShader]} />
+    </mesh>
+  );
+};
+
 // ============================================================
-// TAXONOMY IV: EXPLODED CUBE
+// EXPLODED VIEWS
 // ============================================================
+
+// Example 1: Exploded Cube
 const ExplodedCube = () => {
   const groupRef = useRef();
   const partsRef = useRef([]);
   const scroll = useScroll();
-  const { viewport } = useThree();
 
   const parts = useMemo(() => [
     { pos: [0, 1, 0], rot: [0, 0, 0], color: '#22d3ee', dir: [0, 1, 0] },
@@ -204,19 +282,13 @@ const ExplodedCube = () => {
 
   useFrame((state) => {
     if (!groupRef.current) return;
-    
-    // Explosion from 55% to 80%
-    const explosion = scroll.range(0.55, 0.25);
+    const explosion = scroll.range(0.2, 0.6);
     const dist = explosion * 4;
     
     partsRef.current.forEach((mesh, i) => {
       if (!mesh) return;
       const p = parts[i];
-      mesh.position.set(
-        p.pos[0] + p.dir[0] * dist,
-        p.pos[1] + p.dir[1] * dist,
-        p.pos[2] + p.dir[2] * dist
-      );
+      mesh.position.set(p.pos[0] + p.dir[0] * dist, p.pos[1] + p.dir[1] * dist, p.pos[2] + p.dir[2] * dist);
     });
     
     groupRef.current.rotation.x = state.clock.elapsedTime * 0.2;
@@ -224,246 +296,358 @@ const ExplodedCube = () => {
   });
 
   return (
-    <group position={[0, -viewport.height * 3.5, 0]}>
-      <group ref={groupRef}>
-        {parts.map((p, i) => (
-          <mesh key={i} ref={el => partsRef.current[i] = el} position={p.pos} rotation={p.rot}>
-            <boxGeometry args={[2.2, 0.2, 2.2]} />
-            <meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={0.35} metalness={0.9} roughness={0.1} />
-          </mesh>
-        ))}
-        <mesh scale={0.8}>
-          <icosahedronGeometry args={[1, 2]} />
-          <meshBasicMaterial color="#fff" wireframe />
+    <group ref={groupRef}>
+      {parts.map((p, i) => (
+        <mesh key={i} ref={el => partsRef.current[i] = el} position={p.pos} rotation={p.rot}>
+          <boxGeometry args={[2.2, 0.2, 2.2]} />
+          <meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={0.35} metalness={0.9} roughness={0.1} />
         </mesh>
-        <pointLight intensity={4} color="#22d3ee" distance={10} />
-      </group>
+      ))}
+      <mesh scale={0.6}><icosahedronGeometry args={[1, 2]} /><meshBasicMaterial color="#fff" wireframe /></mesh>
+      <pointLight intensity={3} color="#22d3ee" distance={8} />
     </group>
   );
 };
 
-// ============================================================
-// TAXONOMY V: ROTATING GLOBE
-// ============================================================
-const Globe = () => {
+// Example 2: Exploded Icosahedron
+const ExplodedIcosahedron = () => {
   const groupRef = useRef();
-  const innerRef = useRef();
+  const partsRef = useRef([]);
   const scroll = useScroll();
-  const { viewport } = useThree();
+
+  const parts = useMemo(() => {
+    const geo = new THREE.IcosahedronGeometry(1, 0);
+    const positions = geo.attributes.position.array;
+    const faces = [];
+    
+    for (let i = 0; i < 20; i++) {
+      const angle1 = (i / 20) * Math.PI * 2;
+      const angle2 = ((i % 5) / 5) * Math.PI;
+      faces.push({
+        pos: [Math.sin(angle1) * 1.2, Math.cos(angle2) * 1.2 - 0.5, Math.cos(angle1) * 1.2],
+        dir: [Math.sin(angle1), Math.cos(angle2) - 0.4, Math.cos(angle1)],
+        color: `hsl(${280 + i * 4}, 70%, 55%)`
+      });
+    }
+    return faces;
+  }, []);
 
   useFrame((state) => {
     if (!groupRef.current) return;
+    const explosion = scroll.range(0.2, 0.6);
+    const dist = explosion * 3;
     
-    const rot = scroll.offset * Math.PI * 4;
-    groupRef.current.rotation.y = rot;
-    groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.3) * 0.2;
+    partsRef.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const p = parts[i];
+      mesh.position.set(p.pos[0] + p.dir[0] * dist, p.pos[1] + p.dir[1] * dist, p.pos[2] + p.dir[2] * dist);
+    });
     
-    if (innerRef.current) {
-      innerRef.current.rotation.y = -rot * 0.5;
-    }
+    groupRef.current.rotation.y = state.clock.elapsedTime * 0.25;
   });
 
   return (
-    <group position={[0, -viewport.height * 4.5, 0]}>
-      <group ref={groupRef}>
-        <mesh>
-          <sphereGeometry args={[3.5, 48, 48]} />
-          <meshStandardMaterial color="#7c3aed" emissive="#a855f7" emissiveIntensity={0.45} wireframe />
+    <group ref={groupRef} scale={2}>
+      {parts.map((p, i) => (
+        <mesh key={i} ref={el => partsRef.current[i] = el} position={p.pos}>
+          <tetrahedronGeometry args={[0.35]} />
+          <meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={0.3} metalness={0.8} roughness={0.2} />
         </mesh>
-        <mesh scale={0.8}>
-          <sphereGeometry args={[3.5, 32, 32]} />
-          <meshStandardMaterial color="#8b5cf6" emissive="#c084fc" emissiveIntensity={0.3} wireframe transparent opacity={0.5} />
-        </mesh>
-        <mesh ref={innerRef} scale={0.4}>
-          <icosahedronGeometry args={[3, 3]} />
-          <meshStandardMaterial color="#c084fc" emissive="#e879f9" emissiveIntensity={0.7} metalness={0.8} roughness={0.2} />
-        </mesh>
-        <pointLight intensity={5} color="#c084fc" distance={18} />
-        
-        {/* Rings */}
-        <mesh rotation={[Math.PI/2, 0, 0]}>
-          <torusGeometry args={[4.5, 0.03, 16, 140]} />
-          <meshBasicMaterial color="#a855f7" transparent opacity={0.7} />
-        </mesh>
-        <mesh rotation={[Math.PI/3, Math.PI/5, 0]}>
-          <torusGeometry args={[4.8, 0.03, 16, 140]} />
-          <meshBasicMaterial color="#8b5cf6" transparent opacity={0.5} />
-        </mesh>
-      </group>
+      ))}
+      <pointLight intensity={2} color="#a855f7" distance={6} />
     </group>
   );
 };
 
 // ============================================================
-// MAIN SCENE
+// ROTATION MAPPING
 // ============================================================
-const Scene = () => {
+
+// Example 1: Wireframe Globe
+const WireframeGlobe = () => {
+  const groupRef = useRef();
+  const innerRef = useRef();
+  const scroll = useScroll();
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    const rot = scroll.offset * Math.PI * 4;
+    groupRef.current.rotation.y = rot;
+    groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.3) * 0.2;
+    if (innerRef.current) innerRef.current.rotation.y = -rot * 0.5;
+  });
+
+  return (
+    <group ref={groupRef}>
+      <mesh><sphereGeometry args={[3, 40, 40]} /><meshStandardMaterial color="#7c3aed" emissive="#a855f7" emissiveIntensity={0.4} wireframe /></mesh>
+      <mesh scale={0.8}><sphereGeometry args={[3, 28, 28]} /><meshStandardMaterial color="#8b5cf6" emissive="#c084fc" emissiveIntensity={0.25} wireframe transparent opacity={0.5} /></mesh>
+      <mesh ref={innerRef} scale={0.4}><icosahedronGeometry args={[3, 3]} /><meshStandardMaterial color="#c084fc" emissive="#e879f9" emissiveIntensity={0.6} metalness={0.8} roughness={0.2} /></mesh>
+      <mesh rotation={[Math.PI/2, 0, 0]}><torusGeometry args={[4, 0.025, 16, 100]} /><meshBasicMaterial color="#a855f7" transparent opacity={0.7} /></mesh>
+      <mesh rotation={[Math.PI/3, Math.PI/5, 0]}><torusGeometry args={[4.3, 0.025, 16, 100]} /><meshBasicMaterial color="#8b5cf6" transparent opacity={0.5} /></mesh>
+      <pointLight intensity={4} color="#c084fc" distance={15} />
+    </group>
+  );
+};
+
+// Example 2: Rotating DNA Helix
+const DNAHelix = () => {
+  const groupRef = useRef();
+  const scroll = useScroll();
+
+  const helixPoints = useMemo(() => {
+    const points = [];
+    for (let i = 0; i < 30; i++) {
+      const t = i / 30 * Math.PI * 4;
+      points.push({
+        pos1: [Math.cos(t) * 1.5, i * 0.3 - 4.5, Math.sin(t) * 1.5],
+        pos2: [Math.cos(t + Math.PI) * 1.5, i * 0.3 - 4.5, Math.sin(t + Math.PI) * 1.5],
+        color: `hsl(${180 + i * 6}, 75%, 55%)`
+      });
+    }
+    return points;
+  }, []);
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    groupRef.current.rotation.y = scroll.offset * Math.PI * 6;
+  });
+
+  return (
+    <group ref={groupRef}>
+      {helixPoints.map((p, i) => (
+        <group key={i}>
+          <mesh position={p.pos1}><sphereGeometry args={[0.2, 16, 16]} /><meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={0.4} /></mesh>
+          <mesh position={p.pos2}><sphereGeometry args={[0.2, 16, 16]} /><meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={0.4} /></mesh>
+          {i % 3 === 0 && (
+            <mesh position={[(p.pos1[0] + p.pos2[0])/2, p.pos1[1], (p.pos1[2] + p.pos2[2])/2]} rotation={[0, Math.atan2(p.pos2[2] - p.pos1[2], p.pos2[0] - p.pos1[0]), Math.PI/2]}>
+              <cylinderGeometry args={[0.05, 0.05, 3, 8]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={0.4} />
+            </mesh>
+          )}
+        </group>
+      ))}
+    </group>
+  );
+};
+
+// ============================================================
+// PARALLAX LAYERS
+// ============================================================
+
+// Example 1: Floating Cards
+const FloatingCards = () => {
+  const groupRef = useRef();
+  const cardsRef = useRef([]);
+  const scroll = useScroll();
+
+  const cards = useMemo(() => [
+    { pos: [-3, 2, -5], speed: 0.3, color: '#22d3ee', size: [1.5, 2, 0.1] },
+    { pos: [3, -1, -8], speed: 0.5, color: '#a855f7', size: [2, 1.2, 0.1] },
+    { pos: [-2, -2, -3], speed: 0.2, color: '#ec4899', size: [1.2, 1.8, 0.1] },
+    { pos: [2, 1.5, -6], speed: 0.4, color: '#10b981', size: [1.8, 1, 0.1] },
+    { pos: [0, 0, -10], speed: 0.6, color: '#f59e0b', size: [2.5, 1.5, 0.1] },
+    { pos: [-4, 0, -7], speed: 0.45, color: '#6366f1', size: [1.4, 2.2, 0.1] },
+  ], []);
+
+  useFrame((state) => {
+    cardsRef.current.forEach((card, i) => {
+      if (!card) return;
+      const c = cards[i];
+      card.position.y = c.pos[1] + scroll.offset * c.speed * 10;
+      card.rotation.y = Math.sin(state.clock.elapsedTime + i) * 0.1;
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {cards.map((c, i) => (
+        <mesh key={i} ref={el => cardsRef.current[i] = el} position={c.pos}>
+          <boxGeometry args={c.size} />
+          <meshStandardMaterial color={c.color} emissive={c.color} emissiveIntensity={0.3} metalness={0.5} roughness={0.3} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+// Example 2: Mountain Layers
+const MountainLayers = () => {
+  const layersRef = useRef([]);
+  const scroll = useScroll();
+
+  const layers = useMemo(() => [
+    { z: -15, color: '#1e1b4b', height: 4, speed: 0.1 },
+    { z: -12, color: '#312e81', height: 3.5, speed: 0.2 },
+    { z: -9, color: '#4338ca', height: 3, speed: 0.35 },
+    { z: -6, color: '#6366f1', height: 2.5, speed: 0.5 },
+    { z: -3, color: '#818cf8', height: 2, speed: 0.7 },
+  ], []);
+
+  useFrame(() => {
+    layersRef.current.forEach((layer, i) => {
+      if (!layer) return;
+      layer.position.y = -2 + scroll.offset * layers[i].speed * 8;
+    });
+  });
+
+  return (
+    <group>
+      {layers.map((l, i) => (
+        <mesh key={i} ref={el => layersRef.current[i] = el} position={[0, -2, l.z]}>
+          <planeGeometry args={[20, l.height * 2]} />
+          <meshBasicMaterial color={l.color} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+      <mesh position={[0, 4, -20]}><circleGeometry args={[1.5, 32]} /><meshBasicMaterial color="#fef3c7" /></mesh>
+    </group>
+  );
+};
+
+// ============================================================
+// SCENE WRAPPER WITH SCROLL
+// ============================================================
+const AnimationScene = ({ children, pages = 3 }) => {
   return (
     <>
       <ambientLight intensity={0.3} />
-      <pointLight position={[-15, 10, -20]} intensity={4} color="#22d3ee" />
-      <pointLight position={[15, -10, -15]} intensity={4} color="#ec4899" />
-      <pointLight position={[0, 15, -35]} intensity={3} color="#a855f7" />
+      <pointLight position={[-10, 10, 10]} intensity={2} color="#22d3ee" />
+      <pointLight position={[10, -10, -10]} intensity={2} color="#ec4899" />
+      <Stars radius={100} depth={50} count={2000} factor={4} fade speed={0.5} />
+      <fog attach="fog" args={['#050505', 10, 80]} />
       
-      <Stars radius={180} depth={100} count={4000} factor={5} fade speed={0.6} />
-      <fog attach="fog" args={['#050505', 20, 150]} />
-      
-      <ScrollControls pages={6} damping={0.1}>
-        <Scroll>
-          <ImmersiveTunnel />
-          <VelocitySphere />
-          <LiquidPlane />
-          <ExplodedCube />
-          <Globe />
-        </Scroll>
-        
-        <Scroll html style={{ width: '100%' }}>
-          {/* Section 1: Tunnel */}
-          <section className="scroll-section">
-            <div className="card-wrapper left">
-              <div className="glass-card" data-testid="section-tunnel">
-                <span className="section-num">01</span>
-                <h1 className="section-title">Taxonomy I</h1>
-                <h2 className="section-subtitle cyan">Pseudo-3D Tunnel</h2>
-                <p className="section-text">
-                  <strong>"The Z-Axis Zoom"</strong><br/>
-                  Flying through a tunnel of light rings. Scroll drives your journey 
-                  forward into the vanishing point, creating true depth perception.
-                </p>
-              </div>
-            </div>
-          </section>
-          
-          {/* Section 2: Velocity */}
-          <section className="scroll-section">
-            <div className="card-wrapper right">
-              <div className="glass-card" data-testid="section-velocity">
-                <span className="section-num">02</span>
-                <h1 className="section-title">Taxonomy II</h1>
-                <h2 className="section-subtitle purple">Velocity Deformation</h2>
-                <p className="section-text">
-                  <strong>"The Gelatinous Feel"</strong><br/>
-                  The sphere morphs based on your scroll speed. Fast scrolling 
-                  creates dramatic distortion—a tactile, organic response.
-                </p>
-                <span className="hint-text">↕ Scroll fast to see the effect!</span>
-              </div>
-            </div>
-          </section>
-          
-          {/* Section 3: Liquid */}
-          <section className="scroll-section">
-            <div className="card-wrapper left">
-              <div className="glass-card" data-testid="section-liquid">
-                <span className="section-num">03</span>
-                <h1 className="section-title">Taxonomy III</h1>
-                <h2 className="section-subtitle pink">WebGL Liquid Distortion</h2>
-                <p className="section-text">
-                  <strong>"The Texture Projection"</strong><br/>
-                  Custom vertex shaders manipulate geometry based on scroll velocity 
-                  (ΔP/Δt), creating fluid, organic wave patterns.
-                </p>
-              </div>
-            </div>
-          </section>
-          
-          {/* Section 4: Exploded */}
-          <section className="scroll-section">
-            <div className="card-wrapper right">
-              <div className="glass-card" data-testid="section-exploded">
-                <span className="section-num">04</span>
-                <h1 className="section-title">Taxonomy IV</h1>
-                <h2 className="section-subtitle cyan">Exploded View</h2>
-                <p className="section-text">
-                  <strong>"Model Deconstruction"</strong><br/>
-                  Using scroll.range() to drive component separation, revealing 
-                  the internal structure and engineering of a 3D object.
-                </p>
-              </div>
-            </div>
-          </section>
-          
-          {/* Section 5: Globe */}
-          <section className="scroll-section center">
-            <div className="center-card" data-testid="section-globe">
-              <span className="section-num">05</span>
-              <h1 className="center-title">Spherical Navigation</h1>
-              <p className="center-text">
-                Mapping scroll offset (0→1) directly to rotation radians (0→2π).<br/>
-                A complete rotation journey controlled by your scroll.
-              </p>
-              <button 
-                className="download-btn" 
-                data-testid="download-report-btn"
-                onClick={() => {
-                  alert('Thank you for exploring Immersive Horizons!\n\nThis demo showcases 5 partial-3D scroll interaction taxonomies.');
-                }}
-              >
-                Download Report
-              </button>
-            </div>
-          </section>
-          
-          {/* Extra scroll space for globe animation */}
-          <section className="scroll-section center">
-            <div style={{ opacity: 0 }}>
-              {/* Invisible spacer to allow continued globe rotation */}
-            </div>
-          </section>
-        </Scroll>
+      <ScrollControls pages={pages} damping={0.12}>
+        <Scroll>{children}</Scroll>
       </ScrollControls>
     </>
   );
 };
 
 // ============================================================
-// LOADING OVERLAY
+// ANIMATION COMPONENTS MAP
 // ============================================================
-const Loader = () => (
-  <div className="loader-overlay">
-    <div className="loader-spinner"></div>
-    <p className="loader-text">Loading Experience...</p>
-  </div>
-);
+const ANIMATIONS = {
+  tunnel: [
+    { name: 'Ring Tunnel', component: RingTunnel, description: 'Fly through concentric light rings' },
+    { name: 'Particle Starfield', component: ParticleTunnel, description: 'Warp through a field of particles' }
+  ],
+  velocity: [
+    { name: 'Morphing Sphere', component: MorphingSphere, description: 'Sphere distorts with scroll speed' },
+    { name: 'Wobbling Torus Knot', component: WobblingTorus, description: 'Complex shape wobbles with velocity' }
+  ],
+  shader: [
+    { name: 'Liquid Waves', component: LiquidPlane, description: 'Custom shader creating fluid motion' },
+    { name: 'Noise Displacement', component: NoiseSphere, description: 'Procedural noise deforms geometry' }
+  ],
+  exploded: [
+    { name: 'Exploded Cube', component: ExplodedCube, description: 'Cube separates into 6 faces' },
+    { name: 'Exploded Icosahedron', component: ExplodedIcosahedron, description: '20 triangular faces separate' }
+  ],
+  rotation: [
+    { name: 'Wireframe Globe', component: WireframeGlobe, description: 'Scroll offset maps to rotation' },
+    { name: 'DNA Helix', component: DNAHelix, description: 'Double helix rotates with scroll' }
+  ],
+  parallax: [
+    { name: 'Floating Cards', component: FloatingCards, description: 'Cards at different depths move at different speeds' },
+    { name: 'Mountain Layers', component: MountainLayers, description: 'Layered landscape with depth parallax' }
+  ]
+};
 
 // ============================================================
 // MAIN APP
 // ============================================================
 export default function App() {
-  const [ready, setReady] = useState(false);
-  
+  const [activeCategory, setActiveCategory] = useState('tunnel');
+  const [activeExample, setActiveExample] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    const t = setTimeout(() => setReady(true), 1200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    setActiveExample(0);
+  }, [activeCategory]);
+
+  const currentAnimations = ANIMATIONS[activeCategory];
+  const CurrentComponent = currentAnimations[activeExample].component;
+  const currentInfo = currentAnimations[activeExample];
 
   return (
     <div className="app-root" data-testid="app-container">
-      {!ready && <Loader />}
-      
-      <Canvas
-        camera={{ position: [0, 0, 12], fov: 55, near: 0.1, far: 300 }}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
-      >
-        <color attach="background" args={['#050505']} />
-        <Suspense fallback={null}>
-          <Scene />
-        </Suspense>
-      </Canvas>
-      
-      {/* Header */}
-      <header className="site-header" data-testid="header">
-        <div className="brand">
-          IMMERSIVE<span className="brand-accent">HORIZONS</span>
+      {isLoading && (
+        <div className="loader-overlay">
+          <div className="loader-spinner"></div>
+          <p className="loader-text">Loading...</p>
         </div>
-        <div className="subtitle">PARTIAL-3D SCROLL INTERACTION</div>
-      </header>
+      )}
       
-      {/* Scroll Hint */}
-      <div className="scroll-hint" data-testid="scroll-indicator">
-        <span>SCROLL</span>
-        <div className="scroll-line-anim"></div>
-      </div>
+      {/* Sidebar Navigation */}
+      <nav className="sidebar" data-testid="sidebar">
+        <div className="sidebar-header">
+          <h1 className="sidebar-title">Immersive<span>Horizons</span></h1>
+          <p className="sidebar-subtitle">3D Scroll Effects</p>
+        </div>
+        
+        <div className="sidebar-categories">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
+              onClick={() => setActiveCategory(cat.id)}
+              data-testid={`category-${cat.id}`}
+            >
+              <span className="category-icon">{cat.icon}</span>
+              <div className="category-info">
+                <span className="category-name">{cat.name}</span>
+                <span className="category-desc">{cat.description}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </nav>
+      
+      {/* Main Content */}
+      <main className="main-content">
+        {/* Example Tabs */}
+        <div className="example-tabs" data-testid="example-tabs">
+          {currentAnimations.map((anim, i) => (
+            <button
+              key={i}
+              className={`example-tab ${activeExample === i ? 'active' : ''}`}
+              onClick={() => setActiveExample(i)}
+              data-testid={`example-tab-${i}`}
+            >
+              Example {i + 1}: {anim.name}
+            </button>
+          ))}
+        </div>
+        
+        {/* Canvas */}
+        <div className="canvas-container">
+          <Canvas
+            key={`${activeCategory}-${activeExample}`}
+            camera={{ position: [0, 0, 10], fov: 55 }}
+            gl={{ antialias: true, powerPreference: 'high-performance' }}
+          >
+            <color attach="background" args={['#050505']} />
+            <Suspense fallback={null}>
+              <AnimationScene pages={3}>
+                <CurrentComponent />
+              </AnimationScene>
+            </Suspense>
+          </Canvas>
+        </div>
+        
+        {/* Info Panel */}
+        <div className="info-panel" data-testid="info-panel">
+          <h2 className="info-title">{currentInfo.name}</h2>
+          <p className="info-desc">{currentInfo.description}</p>
+          <div className="scroll-hint">
+            <span>↕</span> Scroll to interact
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
