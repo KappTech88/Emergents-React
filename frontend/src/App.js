@@ -382,6 +382,33 @@ const CONTROLS_CONFIG = {
   parallax: [
     { key: 'speedMultiplier', label: 'Speed Range', min: 2, max: 15, step: 1, default: 8 },
     { key: 'depthRange', label: 'Depth Spread', min: 5, max: 20, step: 1, default: 12 },
+  ],
+  dof: [
+    { key: 'focusDistance', label: 'Focus Distance', min: 0, max: 20, step: 1, default: 10 },
+    { key: 'blurIntensity', label: 'Blur Intensity', min: 0.1, max: 1, step: 0.1, default: 0.5 },
+    { key: 'focalRange', label: 'Focal Range', min: 1, max: 10, step: 0.5, default: 3 },
+  ],
+  camerapath: [
+    { key: 'pathSpeed', label: 'Path Speed', min: 0.5, max: 3, step: 0.25, default: 1 },
+    { key: 'pathRadius', label: 'Path Radius', min: 5, max: 20, step: 1, default: 10 },
+    { key: 'pathHeight', label: 'Path Height', min: 0, max: 10, step: 0.5, default: 3 },
+  ],
+  morph: [
+    { key: 'morphSpeed', label: 'Morph Speed', min: 0.5, max: 3, step: 0.25, default: 1 },
+    { key: 'morphEasing', label: 'Easing Strength', min: 1, max: 5, step: 0.5, default: 2 },
+  ],
+  reveal: [
+    { key: 'revealSpeed', label: 'Reveal Speed', min: 0.5, max: 3, step: 0.25, default: 1 },
+    { key: 'edgeSoftness', label: 'Edge Softness', min: 0, max: 0.5, step: 0.05, default: 0.1 },
+  ],
+  uvscroll: [
+    { key: 'scrollSpeed', label: 'Scroll Speed', min: 0.5, max: 5, step: 0.5, default: 2 },
+    { key: 'distortAmount', label: 'Distortion', min: 0, max: 0.3, step: 0.02, default: 0.1 },
+  ],
+  orbit: [
+    { key: 'orbitSpeed', label: 'Orbit Speed', min: 0.1, max: 2, step: 0.1, default: 0.5 },
+    { key: 'zoomRange', label: 'Zoom Range', min: 5, max: 25, step: 1, default: 15 },
+    { key: 'autoRotate', label: 'Auto Rotate', min: 0, max: 1, step: 0.1, default: 0.5 },
   ]
 };
 
