@@ -308,7 +308,7 @@ const Scene = () => {
       <Stars radius={180} depth={100} count={4000} factor={5} fade speed={0.6} />
       <fog attach="fog" args={['#050505', 20, 150]} />
       
-      <ScrollControls pages={5} damping={0.1}>
+      <ScrollControls pages={6} damping={0.1}>
         <Scroll>
           <ImmersiveTunnel />
           <VelocitySphere />
