@@ -138,3 +138,5 @@ test_plan:
 agent_communication:
     - agent: "testing"
       message: "Successfully tested 3D scroll effects landing page. Fixed critical postprocessing compatibility issue by disabling EffectComposer. All requested features working: landing page loads, 3D canvas present and functional, scroll effects work for all 5 sections (Effect 1-5), EMERGENT 3D header visible, no R3F console errors, WebGL supported. Minor issue: postprocessing effects (Bloom, Noise, Vignette) disabled due to React 18 compatibility - recommend upgrading to React 19 or using compatible postprocessing versions."
+    - agent: "testing"
+      message: "New testing request received for updated 'Immersive Horizons' scroll page. Will verify all 5 taxonomy sections: tunnel effect rendering, VELOCITY text presence, liquid distortion shader, exploded cube parts, spherical navigation sphere, and check for shader compilation errors. Starting comprehensive testing now."
