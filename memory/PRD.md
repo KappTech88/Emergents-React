@@ -1,10 +1,10 @@
 # Immersive Horizons - 3D Scroll Effects Showcase
 
 ## Original Problem Statement
-Create a tabbed application showcasing different types of 3D scroll effects. Each category should have its own dedicated page with 2 examples. Include a collapsible side panel with code snippets (for vibecoding reference) and interactive controls to tweak animation parameters in real-time.
+Create a comprehensive tabbed application showcasing different types of 3D scroll effects. Each category should have its own dedicated page with 2 examples. Include a collapsible side panel with code snippets (for vibecoding reference) and interactive controls to tweak animation parameters in real-time.
 
 ## Project Overview
-A WebGL-powered learning tool demonstrating 6 categories of 3D scroll interaction patterns, with 12 total animations, code reference snippets, and real-time parameter controls.
+A WebGL-powered learning tool demonstrating **12 categories** of 3D scroll interaction patterns, with **24 total animations**, code reference snippets, and real-time parameter controls.
 
 ## Tech Stack
 - **Frontend**: React 18.3.1
@@ -13,110 +13,80 @@ A WebGL-powered learning tool demonstrating 6 categories of 3D scroll interactio
 - **3D Core**: Three.js 0.166.1
 - **Styling**: Tailwind CSS 3.4.4
 
-## App Layout
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Sidebar       │        Main Canvas          │  Right Panel [←] │
-│  Navigation    │                             │  ┌─────────────┐ │
-│                │                             │  │ [Code][Tweak]│ │
-│  ◎ Tunnel      │                             │  ├─────────────┤ │
-│  ◉ Velocity    │      3D Animation           │  │ Code snippet│ │
-│  ◈ Shader      │                             │  │ + explain   │ │
-│  ❖ Exploded    │                             │  │             │ │
-│  ◐ Rotation    │    ┌─────────────────┐      │  │ --- or ---  │ │
-│  ☰ Parallax    │    │   Info Panel    │      │  │             │ │
-│                │    └─────────────────┘      │  │ Sliders     │ │
-│                │                             │  │ + guardrails│ │
-└─────────────────────────────────────────────────────────────────┘
-```
+## All 12 Animation Categories (24 Total Animations)
 
-## Implemented Features (Feb 1, 2026)
+### Original 6 Categories
+| # | Category | Example 1 | Example 2 |
+|---|----------|-----------|-----------|
+| 1 | Tunnel Effects | Ring Tunnel | Particle Starfield |
+| 2 | Velocity Deformation | Morphing Sphere | Wobbling Torus Knot |
+| 3 | Shader Effects | Liquid Waves | Noise Displacement |
+| 4 | Exploded Views | Exploded Cube | Exploded Icosahedron |
+| 5 | Rotation Mapping | Wireframe Globe | DNA Helix |
+| 6 | Parallax Layers | Floating Cards | Mountain Layers |
 
-### 6 Animation Categories (12 Total Animations)
+### New 6 Categories (Added Feb 1, 2026)
+| # | Category | Example 1 | Example 2 |
+|---|----------|-----------|-----------|
+| 7 | Depth of Field | Focus Pull | Bokeh Particles |
+| 8 | Camera Path | Spline Camera | Orbit Path |
+| 9 | Morph Targets | Shape Morph | Blob Morph |
+| 10 | Reveal Effects | Circle Reveal | Wipe Reveal |
+| 11 | Texture Scroll | Grid Scroll | Wave UV Distortion |
+| 12 | Orbit Controls | Zoom Orbit | Speed Orbit |
 
-| Category | Example 1 | Example 2 |
-|----------|-----------|-----------|
-| Tunnel Effects | Ring Tunnel (50 rings) | Particle Starfield (2000 pts) |
-| Velocity Deformation | Morphing Sphere | Wobbling Torus Knot |
-| Shader Effects | Liquid Waves | Noise Displacement |
-| Exploded Views | Exploded Cube (6 faces) | Exploded Icosahedron (20 faces) |
-| Rotation Mapping | Wireframe Globe | DNA Helix |
-| Parallax Layers | Floating Cards | Mountain Layers |
+## Features
 
-### Right Panel - Code Tab
-Focused code snippets for vibecoding reference:
-- **Tunnel**: `scroll.range()` for camera movement
-- **Velocity**: `scroll.delta` + lerp for smooth velocity tracking
-- **Shader**: GLSL vertex displacement with `sin()` waves
-- **Exploded**: Direction vectors + `scroll.range()` for separation
-- **Rotation**: `scroll.offset` → rotation radians mapping
-- **Parallax**: Depth-based speed multipliers
+### Collapsible Right Panel
+- **Code Tab**: Focused code snippets for vibecoding reference
+- **Tweak Tab**: Interactive sliders with min/max guardrails
+- Panel starts **closed** by default to reduce clutter
 
-### Right Panel - Tweak Tab
-Interactive sliders with min/max guardrails:
-
+### Controls Per Category
 | Category | Controls |
 |----------|----------|
-| Tunnel | Ring Count (10-80), Spacing (1-5), Speed (50-200), Hue (0-360) |
-| Velocity | Distort (0.1-1.5), Base Speed (0.5-5), Velocity Effect (20-150) |
-| Shader | Frequency (1-8), Amplitude (0.1-1), Time Speed (0.5-5) |
-| Exploded | Max Distance (1-8), Rotation Speed (0.05-0.5) |
-| Rotation | Rotation Multiplier (1-8), Tilt (0-0.5) |
-| Parallax | Speed Range (2-15), Depth Spread (5-20) |
+| Tunnel | Ring Count, Spacing, Speed, Hue |
+| Velocity | Distort, Base Speed, Velocity Effect |
+| Shader | Frequency, Amplitude, Time Speed |
+| Exploded | Max Distance, Rotation Speed |
+| Rotation | Rotation Multiplier, Tilt |
+| Parallax | Speed Range, Depth Spread |
+| DOF | Focus Distance, Blur Intensity, Focal Range |
+| Camera Path | Path Speed, Radius, Height |
+| Morph | Morph Speed, Easing Strength |
+| Reveal | Reveal Speed, Edge Softness |
+| UV Scroll | Scroll Speed, Distortion |
+| Orbit | Orbit Speed, Zoom Range, Auto Rotate |
 
 ## Testing Status
-- **Iteration 3**: 100% PASS
-- All panel features verified
-- Real-time slider updates confirmed
-- All 6 categories + 12 animations working
+- **Iteration 4**: 100% PASS
+- All 12 categories verified
+- All 24 animations working
+- Code snippets displaying correctly
+- Tweak controls functional
+- Scroll interactions verified
 
 ## File Structure
 ```
 /app/frontend/src/
-├── App.js          # All components, snippets, controls config
-├── index.css       # Layout + panel styling
+├── App.js          # ~1850 lines - All 24 animations + UI
+├── index.css       # Layout + styling
 └── index.js        # Entry point
 ```
 
-## Key Technical Implementation
-
-### Controls Context
-```jsx
-const ControlsContext = createContext({});
-// Sliders update context → animations read from context
-```
-
-### Code Snippets Structure
-```js
-CODE_SNIPPETS = {
-  tunnel: [{ title, code, explanation }],
-  // ...per category
-}
-```
-
-### Controls Config Structure
-```js
-CONTROLS_CONFIG = {
-  tunnel: [{ key, label, min, max, step, default }],
-  // ...per category
-}
-```
-
 ## Completed Tasks
-- [x] 6 animation categories, 12 animations
-- [x] Collapsible right panel (closed by default)
-- [x] Code tab with focused snippets + explanations
-- [x] Tweak tab with guardrailed sliders
-- [x] Real-time parameter updates via Context
-- [x] Reset to Defaults button
+- [x] 6 original animation categories (12 animations)
+- [x] 6 new animation categories (12 more animations)
+- [x] Collapsible right panel (Code + Tweak tabs)
+- [x] Real-time parameter controls
 - [x] Responsive design
-- [x] All testing passed
+- [x] All testing passed (100%)
 
 ## Future/Backlog
-- [ ] Add more examples per category
-- [ ] Export animation as video/GIF
-- [ ] Save/load custom presets
-- [ ] Share animation settings via URL
-- [ ] Dark/light theme toggle
+- [ ] Mouse hover effects category
 - [ ] Copy code button for snippets
-- [ ] Add color picker for hue controls
+- [ ] Color picker for hue controls
+- [ ] Save/load custom presets
+- [ ] Export animation as video/GIF
+- [ ] Add more examples per category
+- [ ] Comparison mode (side-by-side)
