@@ -596,6 +596,7 @@ export default function App() {
               className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
               onClick={() => setActiveCategory(cat.id)}
               data-testid={`category-${cat.id}`}
+              title={cat.name}
             >
               <span className="category-icon">{cat.icon}</span>
               <div className="category-info">
