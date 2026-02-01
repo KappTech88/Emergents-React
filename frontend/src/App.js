@@ -3,6 +3,8 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ScrollControls, Scroll, useScroll, Stars, MeshDistortMaterial, Float } from '@react-three/drei';
 import * as THREE from 'three';
 
+// Note: This app demonstrates 5 scroll-driven 3D effects from the "Immersive Horizons" research document
+
 // ============================================================
 // TAXONOMY I: IMMERSIVE TUNNEL EFFECT
 // Flying through concentric rings as you scroll
