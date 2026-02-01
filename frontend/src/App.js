@@ -937,6 +937,647 @@ const MountainLayers = () => {
 };
 
 // ============================================================
+// DEPTH OF FIELD EFFECTS
+// ============================================================
+
+// Example 1: Focus Pull - Objects blur based on distance from focus point
+const FocusPull = () => {
+  const groupRef = useRef();
+  const objectsRef = useRef([]);
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const focusDistance = controls.focusDistance || 10;
+  const blurIntensity = controls.blurIntensity || 0.5;
+  const focalRange = controls.focalRange || 3;
+
+  const objects = useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 15; i++) {
+      items.push({
+        position: [(Math.random() - 0.5) * 8, (Math.random() - 0.5) * 6, -i * 1.5 - 2],
+        scale: 0.3 + Math.random() * 0.4,
+        color: `hsl(${200 + i * 10}, 70%, 55%)`,
+        type: i % 3
+      });
+    }
+    return items;
+  }, []);
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    const currentFocus = scroll.offset * focusDistance * 2;
+    
+    objectsRef.current.forEach((obj, i) => {
+      if (!obj) return;
+      const dist = Math.abs(-objects[i].position[2] - currentFocus);
+      const blur = Math.min(dist / focalRange, 1) * blurIntensity;
+      
+      obj.material.opacity = 1 - blur * 0.7;
+      obj.scale.setScalar(objects[i].scale * (1 + blur * 0.3));
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {objects.map((obj, i) => (
+        <mesh key={i} ref={el => objectsRef.current[i] = el} position={obj.position} scale={obj.scale}>
+          {obj.type === 0 && <sphereGeometry args={[1, 16, 16]} />}
+          {obj.type === 1 && <boxGeometry args={[1, 1, 1]} />}
+          {obj.type === 2 && <octahedronGeometry args={[1]} />}
+          <meshStandardMaterial color={obj.color} emissive={obj.color} emissiveIntensity={0.3} transparent />
+        </mesh>
+      ))}
+      <pointLight position={[0, 0, 0]} intensity={2} color="#22d3ee" />
+    </group>
+  );
+};
+
+// Example 2: Bokeh Particles - Out of focus lights become soft circles
+const BokehParticles = () => {
+  const groupRef = useRef();
+  const particlesRef = useRef([]);
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const focusDistance = controls.focusDistance || 10;
+  const blurIntensity = controls.blurIntensity || 0.5;
+
+  const particles = useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 50; i++) {
+      items.push({
+        position: [(Math.random() - 0.5) * 12, (Math.random() - 0.5) * 8, -Math.random() * 20 - 2],
+        baseScale: 0.1 + Math.random() * 0.15,
+        color: `hsl(${Math.random() * 60 + 180}, 80%, 60%)`
+      });
+    }
+    return items;
+  }, []);
+
+  useFrame(() => {
+    const currentFocus = scroll.offset * focusDistance * 2;
+    
+    particlesRef.current.forEach((p, i) => {
+      if (!p) return;
+      const dist = Math.abs(-particles[i].position[2] - currentFocus);
+      const bokehSize = particles[i].baseScale * (1 + dist * blurIntensity * 0.3);
+      const opacity = 1 / (1 + dist * 0.1);
+      
+      p.scale.setScalar(bokehSize);
+      p.material.opacity = opacity;
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {particles.map((p, i) => (
+        <mesh key={i} ref={el => particlesRef.current[i] = el} position={p.position}>
+          <circleGeometry args={[1, 32]} />
+          <meshBasicMaterial color={p.color} transparent side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+// ============================================================
+// CAMERA PATH EFFECTS
+// ============================================================
+
+// Example 1: Spline Camera - Camera follows a curved path
+const SplineCamera = () => {
+  const groupRef = useRef();
+  const pathRef = useRef();
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const pathRadius = controls.pathRadius || 10;
+  const pathHeight = controls.pathHeight || 3;
+
+  const pathPoints = useMemo(() => {
+    const points = [];
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20;
+      const angle = t * Math.PI * 2;
+      points.push(new THREE.Vector3(
+        Math.cos(angle) * pathRadius,
+        Math.sin(t * Math.PI * 2) * pathHeight,
+        Math.sin(angle) * pathRadius
+      ));
+    }
+    return points;
+  }, [pathRadius, pathHeight]);
+
+  const curve = useMemo(() => new THREE.CatmullRomCurve3(pathPoints, true), [pathPoints]);
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    const t = scroll.offset;
+    const position = curve.getPointAt(t);
+    
+    // Visualize camera position with a marker
+    groupRef.current.position.copy(position);
+    groupRef.current.rotation.y = t * Math.PI * 4;
+  });
+
+  return (
+    <group>
+      {/* Path visualization */}
+      <line ref={pathRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={pathPoints.length}
+            array={new Float32Array(pathPoints.flatMap(p => [p.x, p.y, p.z]))}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#22d3ee" transparent opacity={0.5} />
+      </line>
+      
+      {/* Camera marker */}
+      <group ref={groupRef}>
+        <mesh>
+          <coneGeometry args={[0.5, 1, 4]} />
+          <meshStandardMaterial color="#ec4899" emissive="#ec4899" emissiveIntensity={0.5} />
+        </mesh>
+        <pointLight intensity={2} color="#ec4899" distance={5} />
+      </group>
+      
+      {/* Scene objects to fly past */}
+      {[...Array(8)].map((_, i) => (
+        <mesh key={i} position={[Math.cos(i * 0.8) * 5, Math.sin(i * 0.5) * 2, Math.sin(i * 0.8) * 5]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color={`hsl(${i * 45}, 70%, 50%)`} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+// Example 2: Orbit Path - Camera orbits around central object
+const OrbitPath = () => {
+  const orbitRef = useRef();
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const pathRadius = controls.pathRadius || 8;
+
+  useFrame((state) => {
+    if (!orbitRef.current) return;
+    const angle = scroll.offset * Math.PI * 2;
+    
+    orbitRef.current.position.x = Math.cos(angle) * pathRadius;
+    orbitRef.current.position.z = Math.sin(angle) * pathRadius;
+    orbitRef.current.position.y = Math.sin(scroll.offset * Math.PI * 4) * 2;
+    orbitRef.current.lookAt(0, 0, 0);
+  });
+
+  return (
+    <group>
+      {/* Central object */}
+      <mesh>
+        <icosahedronGeometry args={[2, 2]} />
+        <meshStandardMaterial color="#a855f7" emissive="#7c3aed" emissiveIntensity={0.5} wireframe />
+      </mesh>
+      <mesh scale={1.5}>
+        <icosahedronGeometry args={[2, 1]} />
+        <meshStandardMaterial color="#c084fc" transparent opacity={0.2} wireframe />
+      </mesh>
+      
+      {/* Orbiting camera marker */}
+      <group ref={orbitRef}>
+        <mesh>
+          <sphereGeometry args={[0.4, 16, 16]} />
+          <meshStandardMaterial color="#22d3ee" emissive="#22d3ee" emissiveIntensity={0.8} />
+        </mesh>
+        <pointLight intensity={3} color="#22d3ee" distance={8} />
+      </group>
+      
+      {/* Orbit ring */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[pathRadius, 0.02, 16, 100]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.3} />
+      </mesh>
+    </group>
+  );
+};
+
+// ============================================================
+// MORPH TARGETS
+// ============================================================
+
+// Example 1: Shape Morph - Geometry interpolates between shapes
+const ShapeMorph = () => {
+  const meshRef = useRef();
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const morphSpeed = controls.morphSpeed || 1;
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const t = scroll.offset * morphSpeed;
+    
+    // Morph via scale transformation
+    const phase = t * 3;
+    const stage = Math.floor(phase) % 3;
+    const progress = phase - Math.floor(phase);
+    
+    let scaleX, scaleY, scaleZ;
+    
+    if (stage === 0) {
+      // Cube to flat disc
+      scaleX = THREE.MathUtils.lerp(1, 2.5, progress);
+      scaleY = THREE.MathUtils.lerp(1, 0.1, progress);
+      scaleZ = THREE.MathUtils.lerp(1, 2.5, progress);
+    } else if (stage === 1) {
+      // Flat disc to tall pillar
+      scaleX = THREE.MathUtils.lerp(2.5, 0.3, progress);
+      scaleY = THREE.MathUtils.lerp(0.1, 4, progress);
+      scaleZ = THREE.MathUtils.lerp(2.5, 0.3, progress);
+    } else {
+      // Pillar back to cube
+      scaleX = THREE.MathUtils.lerp(0.3, 1, progress);
+      scaleY = THREE.MathUtils.lerp(4, 1, progress);
+      scaleZ = THREE.MathUtils.lerp(0.3, 1, progress);
+    }
+    
+    meshRef.current.scale.set(scaleX, scaleY, scaleZ);
+    meshRef.current.rotation.y = state.clock.elapsedTime * 0.5;
+  });
+
+  return (
+    <group>
+      <mesh ref={meshRef}>
+        <boxGeometry args={[1.5, 1.5, 1.5]} />
+        <meshStandardMaterial color="#ec4899" emissive="#be185d" emissiveIntensity={0.4} metalness={0.8} roughness={0.2} />
+      </mesh>
+      <pointLight position={[3, 3, 3]} intensity={2} color="#ec4899" />
+    </group>
+  );
+};
+
+// Example 2: Blob Morph - Organic shape morphing
+const BlobMorph = () => {
+  const meshRef = useRef();
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const morphSpeed = controls.morphSpeed || 1;
+  const morphEasing = controls.morphEasing || 2;
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const t = scroll.offset;
+    const time = state.clock.elapsedTime;
+    
+    // Animated distortion based on scroll
+    const distort = 0.2 + t * 0.6;
+    meshRef.current.material.distort = distort;
+    meshRef.current.material.speed = morphSpeed + t * morphEasing;
+    
+    meshRef.current.rotation.x = time * 0.2;
+    meshRef.current.rotation.y = time * 0.3;
+  });
+
+  return (
+    <Float speed={1.5} rotationIntensity={0.2}>
+      <mesh ref={meshRef} scale={2}>
+        <icosahedronGeometry args={[1, 8]} />
+        <MeshDistortMaterial
+          color="#10b981"
+          emissive="#059669"
+          emissiveIntensity={0.4}
+          roughness={0.2}
+          metalness={0.8}
+          distort={0.3}
+          speed={2}
+        />
+      </mesh>
+    </Float>
+  );
+};
+
+// ============================================================
+// REVEAL EFFECTS
+// ============================================================
+
+// Example 1: Circle Reveal - Content reveals through expanding circle
+const CircleReveal = () => {
+  const groupRef = useRef();
+  const maskRef = useRef();
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const revealSpeed = controls.revealSpeed || 1;
+  const edgeSoftness = controls.edgeSoftness || 0.1;
+
+  const revealShader = useMemo(() => ({
+    uniforms: {
+      uProgress: { value: 0 },
+      uSoftness: { value: edgeSoftness }
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uProgress;
+      uniform float uSoftness;
+      varying vec2 vUv;
+      
+      void main() {
+        vec2 center = vec2(0.5);
+        float dist = distance(vUv, center);
+        float radius = uProgress * 0.75;
+        
+        float alpha = smoothstep(radius + uSoftness, radius - uSoftness, dist);
+        
+        vec3 color = mix(
+          vec3(0.133, 0.827, 0.933),
+          vec3(0.659, 0.341, 0.969),
+          vUv.y
+        );
+        
+        gl_FragColor = vec4(color, alpha);
+      }
+    `
+  }), [edgeSoftness]);
+
+  useFrame(() => {
+    if (!maskRef.current) return;
+    maskRef.current.uniforms.uProgress.value = scroll.offset * revealSpeed;
+  });
+
+  return (
+    <group ref={groupRef}>
+      <mesh>
+        <planeGeometry args={[8, 6]} />
+        <shaderMaterial ref={maskRef} args={[revealShader]} transparent />
+      </mesh>
+      
+      {/* Hidden content behind */}
+      <mesh position={[0, 0, -0.1]}>
+        <planeGeometry args={[8, 6]} />
+        <meshBasicMaterial color="#1e1b4b" />
+      </mesh>
+    </group>
+  );
+};
+
+// Example 2: Wipe Reveal - Horizontal wipe effect
+const WipeReveal = () => {
+  const contentRef = useRef([]);
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const revealSpeed = controls.revealSpeed || 1;
+
+  const items = useMemo(() => [
+    { x: -3, color: '#22d3ee' },
+    { x: -1.5, color: '#a855f7' },
+    { x: 0, color: '#ec4899' },
+    { x: 1.5, color: '#f59e0b' },
+    { x: 3, color: '#10b981' },
+  ], []);
+
+  useFrame(() => {
+    const progress = scroll.offset * revealSpeed;
+    
+    contentRef.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const itemProgress = (progress - i * 0.15) * 2;
+      const scale = THREE.MathUtils.clamp(itemProgress, 0, 1);
+      
+      mesh.scale.y = scale;
+      mesh.material.opacity = scale;
+    });
+  });
+
+  return (
+    <group>
+      {items.map((item, i) => (
+        <mesh key={i} ref={el => contentRef.current[i] = el} position={[item.x, 0, 0]}>
+          <boxGeometry args={[1, 4, 0.5]} />
+          <meshStandardMaterial color={item.color} emissive={item.color} emissiveIntensity={0.3} transparent />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+// ============================================================
+// TEXTURE/UV SCROLL EFFECTS
+// ============================================================
+
+// Example 1: Grid Scroll - Scrolling grid pattern
+const GridScroll = () => {
+  const meshRef = useRef();
+  const matRef = useRef();
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const scrollSpeed = controls.scrollSpeed || 2;
+
+  const gridShader = useMemo(() => ({
+    uniforms: {
+      uTime: { value: 0 },
+      uScroll: { value: 0 }
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform float uScroll;
+      varying vec2 vUv;
+      
+      void main() {
+        vec2 uv = vUv;
+        uv.y += uScroll;
+        
+        float gridX = step(0.9, fract(uv.x * 10.0));
+        float gridY = step(0.9, fract(uv.y * 10.0));
+        float grid = max(gridX, gridY);
+        
+        vec3 bgColor = vec3(0.05);
+        vec3 lineColor = vec3(0.133, 0.827, 0.933);
+        
+        vec3 color = mix(bgColor, lineColor, grid);
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `
+  }), []);
+
+  useFrame((state) => {
+    if (!matRef.current) return;
+    matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    matRef.current.uniforms.uScroll.value = scroll.offset * scrollSpeed;
+  });
+
+  return (
+    <mesh ref={meshRef} rotation={[-0.5, 0, 0]}>
+      <planeGeometry args={[12, 8, 1, 1]} />
+      <shaderMaterial ref={matRef} args={[gridShader]} />
+    </mesh>
+  );
+};
+
+// Example 2: Wave UV Distortion
+const WaveUVDistortion = () => {
+  const matRef = useRef();
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const scrollSpeed = controls.scrollSpeed || 2;
+  const distortAmount = controls.distortAmount || 0.1;
+
+  const waveShader = useMemo(() => ({
+    uniforms: {
+      uTime: { value: 0 },
+      uScroll: { value: 0 },
+      uDistort: { value: distortAmount }
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform float uScroll;
+      uniform float uDistort;
+      varying vec2 vUv;
+      
+      void main() {
+        vec2 uv = vUv;
+        uv.x += sin(vUv.y * 10.0 + uScroll * 5.0) * uDistort;
+        uv.y += cos(vUv.x * 10.0 + uScroll * 3.0) * uDistort;
+        
+        vec3 color1 = vec3(0.925, 0.282, 0.6);
+        vec3 color2 = vec3(0.659, 0.341, 0.969);
+        vec3 color3 = vec3(0.133, 0.827, 0.933);
+        
+        vec3 color = mix(color1, color2, uv.x);
+        color = mix(color, color3, uv.y);
+        
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `
+  }), [distortAmount]);
+
+  useFrame((state) => {
+    if (!matRef.current) return;
+    matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    matRef.current.uniforms.uScroll.value = scroll.offset * scrollSpeed;
+  });
+
+  return (
+    <mesh>
+      <planeGeometry args={[8, 6, 1, 1]} />
+      <shaderMaterial ref={matRef} args={[waveShader]} />
+    </mesh>
+  );
+};
+
+// ============================================================
+// ORBIT CONTROLS EFFECTS
+// ============================================================
+
+// Example 1: Zoom Orbit - Mouse orbit with scroll zoom
+const ZoomOrbit = () => {
+  const groupRef = useRef();
+  const cameraRef = useRef();
+  const scroll = useScroll();
+  const controls = useControls();
+  
+  const zoomRange = controls.zoomRange || 15;
+  const autoRotate = controls.autoRotate || 0.5;
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    
+    // Auto rotation
+    groupRef.current.rotation.y += autoRotate * 0.01;
+    
+    // Scroll controls zoom (scale as proxy for zoom)
+    const zoom = 1 + scroll.offset * (zoomRange / 10);
+    groupRef.current.scale.setScalar(zoom);
+  });
+
+  return (
+    <group ref={groupRef}>
+      <mesh>
+        <torusKnotGeometry args={[1, 0.3, 128, 32]} />
+        <meshStandardMaterial color="#a855f7" emissive="#7c3aed" emissiveIntensity={0.4} metalness={0.8} roughness={0.2} />
+      </mesh>
+      <mesh scale={1.5}>
+        <torusKnotGeometry args={[1, 0.3, 64, 16]} />
+        <meshStandardMaterial color="#22d3ee" wireframe transparent opacity={0.3} />
+      </mesh>
+      <pointLight intensity={2} color="#a855f7" distance={10} />
+    </group>
+  );
+};
+
+// Example 2: Speed Orbit - Rotation speed based on scroll velocity
+const SpeedOrbit = () => {
+  const groupRef = useRef();
+  const scroll = useScroll();
+  const velocityRef = useRef(0);
+  const rotationRef = useRef(0);
+  const controls = useControls();
+  
+  const orbitSpeed = controls.orbitSpeed || 0.5;
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return;
+    
+    // Track velocity
+    const targetVel = Math.abs(scroll.delta) * 50;
+    velocityRef.current = THREE.MathUtils.lerp(velocityRef.current, targetVel, 0.1);
+    
+    // Base rotation + velocity boost
+    const speed = orbitSpeed + velocityRef.current * 0.5;
+    rotationRef.current += speed * delta;
+    
+    groupRef.current.rotation.y = rotationRef.current;
+    groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.2;
+  });
+
+  return (
+    <group ref={groupRef}>
+      {[...Array(6)].map((_, i) => (
+        <mesh key={i} position={[Math.cos(i * Math.PI / 3) * 3, 0, Math.sin(i * Math.PI / 3) * 3]}>
+          <octahedronGeometry args={[0.8]} />
+          <meshStandardMaterial 
+            color={`hsl(${i * 60 + 180}, 70%, 55%)`} 
+            emissive={`hsl(${i * 60 + 180}, 70%, 35%)`}
+            emissiveIntensity={0.4}
+          />
+        </mesh>
+      ))}
+      <mesh>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.5} />
+      </mesh>
+      <pointLight intensity={3} color="#ffffff" distance={10} />
+    </group>
+  );
+};
+
+// ============================================================
 // SCENE WRAPPER
 // ============================================================
 const AnimationScene = ({ children, pages = 3 }) => (
