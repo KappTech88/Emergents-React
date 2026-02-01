@@ -167,7 +167,6 @@ const BigText3D = () => {
 
 
 // --- Main Scene Composition ---
-import { useThree } from '@react-three/fiber';
 
 const SceneContent = () => {
   const { viewport } = useThree();
