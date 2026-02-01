@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Verify the landing page loads and the 3D canvas is present. Test scrolling to ensure the HTML overlay content (Effect 1, Effect 2, etc.) appears. Check for any console errors related to R3F or Postprocessing. Ensure the 'EMERGENT 3D' header is visible."
+user_problem_statement: "Verify the updated 'Immersive Horizons' scroll page. 1. Check that 'Taxonomy I' tunnel effect is rendering (torus geometry). 2. Scroll to Section 2 and check if 'VELOCITY' text is present. 3. Scroll to Section 3 (Liquid Distortion) and verify the shader plane is rendering. 4. Scroll to Section 4 (Exploded View) and verify the cube parts exist. 5. Scroll to Section 5 (Spherical Navigation) and verify the sphere exists. 6. Ensure no shader compilation errors in console."
 
 frontend:
   - task: "3D Scroll Effects Landing Page"
