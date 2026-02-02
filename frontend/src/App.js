@@ -1056,8 +1056,8 @@ const SplineCamera = React.memo(() => {
   const pathRadius = controls.pathRadius || 10;
   const pathHeight = controls.pathHeight || 3;
 
-  // Performance: Memoize geometry to avoid recreation on every render
-  const boxGeometry = useMemo(() => [1, 1, 1], []);
+  // Performance: Memoize geometry args to avoid recreation on every render
+  const boxGeometryArgs = useMemo(() => [1, 1, 1], []);
   const sceneObjects = useMemo(() => 
     [...Array(8)].map((_, i) => ({
       position: [Math.cos(i * 0.8) * 5, Math.sin(i * 0.5) * 2, Math.sin(i * 0.8) * 5],
@@ -1117,7 +1117,7 @@ const SplineCamera = React.memo(() => {
       {/* Scene objects to fly past */}
       {sceneObjects.map((obj, i) => (
         <mesh key={i} position={obj.position}>
-          <boxGeometry args={boxGeometry} />
+          <boxGeometry args={boxGeometryArgs} />
           <meshStandardMaterial color={obj.color} />
         </mesh>
       ))}
@@ -1551,8 +1551,8 @@ const SpeedOrbit = React.memo(() => {
   const orbitSpeed = controls.orbitSpeed || 0.5;
 
   // Performance: Memoize geometry args and orbiting objects
-  const octahedronGeometry = useMemo(() => [0.8], []);
-  const sphereGeometry = useMemo(() => [1, 32, 32], []);
+  const octahedronGeometryArgs = useMemo(() => [0.8], []);
+  const sphereGeometryArgs = useMemo(() => [1, 32, 32], []);
   const orbitingObjects = useMemo(() => 
     [...Array(6)].map((_, i) => ({
       position: [Math.cos(i * Math.PI / 3) * 3, 0, Math.sin(i * Math.PI / 3) * 3],
@@ -1579,7 +1579,7 @@ const SpeedOrbit = React.memo(() => {
     <group ref={groupRef}>
       {orbitingObjects.map((obj, i) => (
         <mesh key={i} position={obj.position}>
-          <octahedronGeometry args={octahedronGeometry} />
+          <octahedronGeometry args={octahedronGeometryArgs} />
           <meshStandardMaterial 
             color={obj.color} 
             emissive={obj.emissive}
@@ -1588,7 +1588,7 @@ const SpeedOrbit = React.memo(() => {
         </mesh>
       ))}
       <mesh>
-        <sphereGeometry args={sphereGeometry} />
+        <sphereGeometry args={sphereGeometryArgs} />
         <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.5} />
       </mesh>
       <pointLight intensity={3} color="#ffffff" distance={10} />
@@ -1680,21 +1680,22 @@ const RightPanel = ({ isOpen, onToggle, activeTab, setActiveTab, category, examp
   const controlsConfig = CONTROLS_CONFIG[category] || [];
 
   // Performance: Memoize event handlers to prevent unnecessary re-renders
+  // Note: setState functions from useState are stable and don't need to be in dependency arrays
   const handleControlChange = useCallback((key, value) => {
     setControls(prev => ({ ...prev, [key]: parseFloat(value) }));
-  }, [setControls]);
+  }, []);
 
   const handleResetControls = useCallback(() => {
     setControls({});
-  }, [setControls]);
+  }, []);
 
   const handleCodeTab = useCallback(() => {
     setActiveTab('code');
-  }, [setActiveTab]);
+  }, []);
 
   const handleTweakTab = useCallback(() => {
     setActiveTab('tweak');
-  }, [setActiveTab]);
+  }, []);
 
   return (
     <>
@@ -1802,6 +1803,7 @@ export default function App() {
   }, [activeCategory]);
 
   // Performance: Memoize event handlers to prevent unnecessary re-renders
+  // Note: setState functions from useState are stable and don't need to be in dependency arrays
   const handleTogglePanel = useCallback(() => {
     setIsPanelOpen(prev => !prev);
   }, []);
@@ -1813,16 +1815,6 @@ export default function App() {
   const handleSetExample = useCallback((exampleIndex) => {
     setActiveExample(exampleIndex);
   }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    setActiveExample(0);
-    setControls({}); // Reset controls when category changes
-  }, [activeCategory]);
 
   const currentAnimations = ANIMATIONS[activeCategory];
   const CurrentComponent = currentAnimations[activeExample].component;
@@ -1880,6 +1872,8 @@ export default function App() {
           </div>
           
           <div className="canvas-container">
+            {/* Performance: Canvas key excludes controls to prevent WebGL context re-creation.
+                Components react to control changes via ControlsContext instead. */}
             <Canvas
               key={`${activeCategory}-${activeExample}`}
               camera={{ position: [0, 0, 10], fov: 55 }}
