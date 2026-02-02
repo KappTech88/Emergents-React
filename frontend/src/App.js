@@ -1,4 +1,4 @@
-import React, { Suspense, useRef, useMemo, useState, useEffect, createContext, useContext } from 'react';
+import React, { Suspense, useRef, useMemo, useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { ScrollControls, Scroll, useScroll, Stars, MeshDistortMaterial, Float, MeshWobbleMaterial } from '@react-three/drei';
 import * as THREE from 'three';
@@ -416,7 +416,8 @@ const CONTROLS_CONFIG = {
 // TUNNEL EFFECTS
 // ============================================================
 
-const RingTunnel = () => {
+// Performance: Memoized to prevent unnecessary re-renders when parent updates
+const RingTunnel = React.memo(() => {
   const groupRef = useRef();
   const ringsRef = useRef([]);
   const scroll = useScroll();
@@ -455,9 +456,9 @@ const RingTunnel = () => {
       <pointLight position={[0, 0, -ringCount * ringSpacing]} intensity={8} color="#22d3ee" distance={120} />
     </group>
   );
-};
+});
 
-const ParticleTunnel = () => {
+const ParticleTunnel = React.memo(() => {
   const pointsRef = useRef();
   const scroll = useScroll();
   const controls = useControls();
@@ -499,13 +500,13 @@ const ParticleTunnel = () => {
       <pointsMaterial size={0.08} vertexColors transparent opacity={0.9} sizeAttenuation />
     </points>
   );
-};
+});
 
 // ============================================================
 // VELOCITY DEFORMATION
 // ============================================================
 
-const MorphingSphere = () => {
+const MorphingSphere = React.memo(() => {
   const meshRef = useRef();
   const scroll = useScroll();
   const velocity = useRef(0);
@@ -536,9 +537,9 @@ const MorphingSphere = () => {
       </mesh>
     </Float>
   );
-};
+});
 
-const WobblingTorus = () => {
+const WobblingTorus = React.memo(() => {
   const meshRef = useRef();
   const scroll = useScroll();
   const velocity = useRef(0);
@@ -568,13 +569,13 @@ const WobblingTorus = () => {
       </mesh>
     </Float>
   );
-};
+});
 
 // ============================================================
 // SHADER EFFECTS
 // ============================================================
 
-const LiquidPlane = () => {
+const LiquidPlane = React.memo(() => {
   const matRef = useRef();
   const scroll = useScroll();
   const vel = useRef(0);
@@ -623,9 +624,9 @@ const LiquidPlane = () => {
       <shaderMaterial ref={matRef} args={[shader]} side={THREE.DoubleSide} />
     </mesh>
   );
-};
+});
 
-const NoiseSphere = () => {
+const NoiseSphere = React.memo(() => {
   const matRef = useRef();
   const meshRef = useRef();
   const scroll = useScroll();
@@ -676,13 +677,13 @@ const NoiseSphere = () => {
       <shaderMaterial ref={matRef} args={[shader]} />
     </mesh>
   );
-};
+});
 
 // ============================================================
 // EXPLODED VIEWS
 // ============================================================
 
-const ExplodedCube = () => {
+const ExplodedCube = React.memo(() => {
   const groupRef = useRef();
   const partsRef = useRef([]);
   const scroll = useScroll();
@@ -727,9 +728,9 @@ const ExplodedCube = () => {
       <pointLight intensity={3} color="#22d3ee" distance={8} />
     </group>
   );
-};
+});
 
-const ExplodedIcosahedron = () => {
+const ExplodedIcosahedron = React.memo(() => {
   const groupRef = useRef();
   const partsRef = useRef([]);
   const scroll = useScroll();
@@ -777,13 +778,13 @@ const ExplodedIcosahedron = () => {
       <pointLight intensity={2} color="#a855f7" distance={6} />
     </group>
   );
-};
+});
 
 // ============================================================
 // ROTATION MAPPING
 // ============================================================
 
-const WireframeGlobe = () => {
+const WireframeGlobe = React.memo(() => {
   const groupRef = useRef();
   const innerRef = useRef();
   const scroll = useScroll();
@@ -810,9 +811,9 @@ const WireframeGlobe = () => {
       <pointLight intensity={4} color="#c084fc" distance={15} />
     </group>
   );
-};
+});
 
-const DNAHelix = () => {
+const DNAHelix = React.memo(() => {
   const groupRef = useRef();
   const scroll = useScroll();
   const controls = useControls();
@@ -853,13 +854,13 @@ const DNAHelix = () => {
       ))}
     </group>
   );
-};
+});
 
 // ============================================================
 // PARALLAX LAYERS
 // ============================================================
 
-const FloatingCards = () => {
+const FloatingCards = React.memo(() => {
   const cardsRef = useRef([]);
   const scroll = useScroll();
   const controls = useControls();
@@ -894,9 +895,9 @@ const FloatingCards = () => {
       ))}
     </group>
   );
-};
+});
 
-const MountainLayers = () => {
+const MountainLayers = React.memo(() => {
   const layersRef = useRef([]);
   const scroll = useScroll();
   const controls = useControls();
@@ -934,14 +935,14 @@ const MountainLayers = () => {
       <mesh position={[0, 4, -20]}><circleGeometry args={[1.5, 32]} /><meshBasicMaterial color="#fef3c7" /></mesh>
     </group>
   );
-};
+});
 
 // ============================================================
 // DEPTH OF FIELD EFFECTS
 // ============================================================
 
 // Example 1: Focus Pull - Objects blur based on distance from focus point
-const FocusPull = () => {
+const FocusPull = React.memo(() => {
   const groupRef = useRef();
   const objectsRef = useRef([]);
   const scroll = useScroll();
@@ -991,10 +992,10 @@ const FocusPull = () => {
       <pointLight position={[0, 0, 0]} intensity={2} color="#22d3ee" />
     </group>
   );
-};
+});
 
 // Example 2: Bokeh Particles - Out of focus lights become soft circles
-const BokehParticles = () => {
+const BokehParticles = React.memo(() => {
   const groupRef = useRef();
   const particlesRef = useRef([]);
   const scroll = useScroll();
@@ -1039,14 +1040,14 @@ const BokehParticles = () => {
       ))}
     </group>
   );
-};
+});
 
 // ============================================================
 // CAMERA PATH EFFECTS
 // ============================================================
 
 // Example 1: Spline Camera - Camera follows a curved path
-const SplineCamera = () => {
+const SplineCamera = React.memo(() => {
   const groupRef = useRef();
   const pathRef = useRef();
   const scroll = useScroll();
@@ -1054,6 +1055,14 @@ const SplineCamera = () => {
   
   const pathRadius = controls.pathRadius || 10;
   const pathHeight = controls.pathHeight || 3;
+
+  // Performance: Memoize geometry args to avoid recreation on every render
+  const boxGeometryArgs = useMemo(() => [1, 1, 1], []);
+  const sceneObjects = useMemo(() => 
+    [...Array(8)].map((_, i) => ({
+      position: [Math.cos(i * 0.8) * 5, Math.sin(i * 0.5) * 2, Math.sin(i * 0.8) * 5],
+      color: `hsl(${i * 45}, 70%, 50%)`
+    })), []);
 
   const pathPoints = useMemo(() => {
     const points = [];
@@ -1106,18 +1115,18 @@ const SplineCamera = () => {
       </group>
       
       {/* Scene objects to fly past */}
-      {[...Array(8)].map((_, i) => (
-        <mesh key={i} position={[Math.cos(i * 0.8) * 5, Math.sin(i * 0.5) * 2, Math.sin(i * 0.8) * 5]}>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial color={`hsl(${i * 45}, 70%, 50%)`} />
+      {sceneObjects.map((obj, i) => (
+        <mesh key={i} position={obj.position}>
+          <boxGeometry args={boxGeometryArgs} />
+          <meshStandardMaterial color={obj.color} />
         </mesh>
       ))}
     </group>
   );
-};
+});
 
 // Example 2: Orbit Path - Camera orbits around central object
-const OrbitPath = () => {
+const OrbitPath = React.memo(() => {
   const orbitRef = useRef();
   const scroll = useScroll();
   const controls = useControls();
@@ -1162,14 +1171,14 @@ const OrbitPath = () => {
       </mesh>
     </group>
   );
-};
+});
 
 // ============================================================
 // MORPH TARGETS
 // ============================================================
 
 // Example 1: Shape Morph - Geometry interpolates between shapes
-const ShapeMorph = () => {
+const ShapeMorph = React.memo(() => {
   const meshRef = useRef();
   const scroll = useScroll();
   const controls = useControls();
@@ -1217,10 +1226,10 @@ const ShapeMorph = () => {
       <pointLight position={[3, 3, 3]} intensity={2} color="#ec4899" />
     </group>
   );
-};
+});
 
 // Example 2: Blob Morph - Organic shape morphing
-const BlobMorph = () => {
+const BlobMorph = React.memo(() => {
   const meshRef = useRef();
   const scroll = useScroll();
   const controls = useControls();
@@ -1258,14 +1267,14 @@ const BlobMorph = () => {
       </mesh>
     </Float>
   );
-};
+});
 
 // ============================================================
 // REVEAL EFFECTS
 // ============================================================
 
 // Example 1: Circle Reveal - Content reveals through expanding circle
-const CircleReveal = () => {
+const CircleReveal = React.memo(() => {
   const groupRef = useRef();
   const maskRef = useRef();
   const scroll = useScroll();
@@ -1328,10 +1337,10 @@ const CircleReveal = () => {
       </mesh>
     </group>
   );
-};
+});
 
 // Example 2: Wipe Reveal - Horizontal wipe effect
-const WipeReveal = () => {
+const WipeReveal = React.memo(() => {
   const contentRef = useRef([]);
   const scroll = useScroll();
   const controls = useControls();
@@ -1369,14 +1378,14 @@ const WipeReveal = () => {
       ))}
     </group>
   );
-};
+});
 
 // ============================================================
 // TEXTURE/UV SCROLL EFFECTS
 // ============================================================
 
 // Example 1: Grid Scroll - Scrolling grid pattern
-const GridScroll = () => {
+const GridScroll = React.memo(() => {
   const meshRef = useRef();
   const matRef = useRef();
   const scroll = useScroll();
@@ -1430,10 +1439,10 @@ const GridScroll = () => {
       <shaderMaterial ref={matRef} args={[gridShader]} />
     </mesh>
   );
-};
+});
 
 // Example 2: Wave UV Distortion
-const WaveUVDistortion = () => {
+const WaveUVDistortion = React.memo(() => {
   const matRef = useRef();
   const scroll = useScroll();
   const controls = useControls();
@@ -1489,14 +1498,14 @@ const WaveUVDistortion = () => {
       <shaderMaterial ref={matRef} args={[waveShader]} />
     </mesh>
   );
-};
+});
 
 // ============================================================
 // ORBIT CONTROLS EFFECTS
 // ============================================================
 
 // Example 1: Zoom Orbit - Mouse orbit with scroll zoom
-const ZoomOrbit = () => {
+const ZoomOrbit = React.memo(() => {
   const groupRef = useRef();
   const cameraRef = useRef();
   const scroll = useScroll();
@@ -1529,10 +1538,10 @@ const ZoomOrbit = () => {
       <pointLight intensity={2} color="#a855f7" distance={10} />
     </group>
   );
-};
+});
 
 // Example 2: Speed Orbit - Rotation speed based on scroll velocity
-const SpeedOrbit = () => {
+const SpeedOrbit = React.memo(() => {
   const groupRef = useRef();
   const scroll = useScroll();
   const velocityRef = useRef(0);
@@ -1540,6 +1549,16 @@ const SpeedOrbit = () => {
   const controls = useControls();
   
   const orbitSpeed = controls.orbitSpeed || 0.5;
+
+  // Performance: Memoize geometry args and orbiting objects
+  const octahedronGeometryArgs = useMemo(() => [0.8], []);
+  const sphereGeometryArgs = useMemo(() => [1, 32, 32], []);
+  const orbitingObjects = useMemo(() => 
+    [...Array(6)].map((_, i) => ({
+      position: [Math.cos(i * Math.PI / 3) * 3, 0, Math.sin(i * Math.PI / 3) * 3],
+      color: `hsl(${i * 60 + 180}, 70%, 55%)`,
+      emissive: `hsl(${i * 60 + 180}, 70%, 35%)`
+    })), []);
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
@@ -1558,24 +1577,24 @@ const SpeedOrbit = () => {
 
   return (
     <group ref={groupRef}>
-      {[...Array(6)].map((_, i) => (
-        <mesh key={i} position={[Math.cos(i * Math.PI / 3) * 3, 0, Math.sin(i * Math.PI / 3) * 3]}>
-          <octahedronGeometry args={[0.8]} />
+      {orbitingObjects.map((obj, i) => (
+        <mesh key={i} position={obj.position}>
+          <octahedronGeometry args={octahedronGeometryArgs} />
           <meshStandardMaterial 
-            color={`hsl(${i * 60 + 180}, 70%, 55%)`} 
-            emissive={`hsl(${i * 60 + 180}, 70%, 35%)`}
+            color={obj.color} 
+            emissive={obj.emissive}
             emissiveIntensity={0.4}
           />
         </mesh>
       ))}
       <mesh>
-        <sphereGeometry args={[1, 32, 32]} />
+        <sphereGeometry args={sphereGeometryArgs} />
         <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.5} />
       </mesh>
       <pointLight intensity={3} color="#ffffff" distance={10} />
     </group>
   );
-};
+});
 
 // ============================================================
 // SCENE WRAPPER
@@ -1660,9 +1679,23 @@ const RightPanel = ({ isOpen, onToggle, activeTab, setActiveTab, category, examp
   const snippets = CODE_SNIPPETS[category]?.[example] || CODE_SNIPPETS[category]?.[0];
   const controlsConfig = CONTROLS_CONFIG[category] || [];
 
-  const handleControlChange = (key, value) => {
+  // Performance: Memoize event handlers to prevent unnecessary re-renders
+  // Note: setState functions from useState are stable and don't need to be in dependency arrays
+  const handleControlChange = useCallback((key, value) => {
     setControls(prev => ({ ...prev, [key]: parseFloat(value) }));
-  };
+  }, []);
+
+  const handleResetControls = useCallback(() => {
+    setControls({});
+  }, []);
+
+  const handleCodeTab = useCallback(() => {
+    setActiveTab('code');
+  }, []);
+
+  const handleTweakTab = useCallback(() => {
+    setActiveTab('tweak');
+  }, []);
 
   return (
     <>
@@ -1682,14 +1715,14 @@ const RightPanel = ({ isOpen, onToggle, activeTab, setActiveTab, category, examp
         <div className="panel-tabs">
           <button 
             className={`panel-tab ${activeTab === 'code' ? 'active' : ''}`}
-            onClick={() => setActiveTab('code')}
+            onClick={handleCodeTab}
             data-testid="tab-code"
           >
             Code
           </button>
           <button 
             className={`panel-tab ${activeTab === 'tweak' ? 'active' : ''}`}
-            onClick={() => setActiveTab('tweak')}
+            onClick={handleTweakTab}
             data-testid="tab-tweak"
           >
             Tweak
@@ -1735,7 +1768,7 @@ const RightPanel = ({ isOpen, onToggle, activeTab, setActiveTab, category, examp
               
               <button 
                 className="reset-btn"
-                onClick={() => setControls({})}
+                onClick={handleResetControls}
                 data-testid="reset-controls"
               >
                 Reset to Defaults
@@ -1769,6 +1802,20 @@ export default function App() {
     setControls({}); // Reset controls when category changes
   }, [activeCategory]);
 
+  // Performance: Memoize event handlers to prevent unnecessary re-renders
+  // Note: setState functions from useState are stable and don't need to be in dependency arrays
+  const handleTogglePanel = useCallback(() => {
+    setIsPanelOpen(prev => !prev);
+  }, []);
+
+  const handleSetCategory = useCallback((catId) => {
+    setActiveCategory(catId);
+  }, []);
+
+  const handleSetExample = useCallback((exampleIndex) => {
+    setActiveExample(exampleIndex);
+  }, []);
+
   const currentAnimations = ANIMATIONS[activeCategory];
   const CurrentComponent = currentAnimations[activeExample].component;
   const currentInfo = currentAnimations[activeExample];
@@ -1795,7 +1842,7 @@ export default function App() {
               <button
                 key={cat.id}
                 className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
-                onClick={() => setActiveCategory(cat.id)}
+                onClick={() => handleSetCategory(cat.id)}
                 data-testid={`category-${cat.id}`}
                 title={cat.name}
               >
@@ -1816,7 +1863,7 @@ export default function App() {
               <button
                 key={i}
                 className={`example-tab ${activeExample === i ? 'active' : ''}`}
-                onClick={() => setActiveExample(i)}
+                onClick={() => handleSetExample(i)}
                 data-testid={`example-tab-${i}`}
               >
                 Example {i + 1}: {anim.name}
@@ -1825,8 +1872,10 @@ export default function App() {
           </div>
           
           <div className="canvas-container">
+            {/* Performance: Canvas key excludes controls to prevent WebGL context re-creation.
+                Components react to control changes via ControlsContext instead. */}
             <Canvas
-              key={`${activeCategory}-${activeExample}-${JSON.stringify(controls)}`}
+              key={`${activeCategory}-${activeExample}`}
               camera={{ position: [0, 0, 10], fov: 55 }}
               gl={{ antialias: true, powerPreference: 'high-performance' }}
             >
@@ -1851,7 +1900,7 @@ export default function App() {
         {/* Right Panel */}
         <RightPanel
           isOpen={isPanelOpen}
-          onToggle={() => setIsPanelOpen(!isPanelOpen)}
+          onToggle={handleTogglePanel}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           category={activeCategory}
