@@ -39,3 +39,8 @@ cd frontend
 npm install --legacy-peer-deps
 CI=false npm run build
 ```
+
+## Known Issues & Workarounds
+
+### ajv Dependency
+The `ajv@^8` package is included as a devDependency to resolve a module resolution conflict with Create React App and newer Node versions. This is a known issue where `ajv-keywords` requires `ajv/dist/compile/codegen` which is not available in older versions of ajv that come transitively with Create React App.
