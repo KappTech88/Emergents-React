@@ -42,5 +42,8 @@ CI=false npm run build
 
 ## Known Issues & Workarounds
 
+### CI=false Build Flag
+The build process uses `CI=false` to allow the build to complete with ESLint warnings. The current codebase has some linting warnings (unused variables, missing hook dependencies) that would fail the build in CI mode. These are non-critical issues that don't affect functionality. To fully address this, the underlying linting warnings should be fixed in the codebase.
+
 ### ajv Dependency
 The `ajv@^8` package is included as a devDependency to resolve a module resolution conflict with Create React App and newer Node versions. This is a known issue where `ajv-keywords` requires `ajv/dist/compile/codegen` which is not available in older versions of ajv that come transitively with Create React App.
