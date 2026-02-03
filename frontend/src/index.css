@@ -666,3 +666,228 @@ body {
   background: var(--cyan);
   color: var(--bg);
 }
+
+/* ============================================
+   REDUCED MOTION SUPPORT
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .scroll-hint span {
+    animation: none;
+  }
+
+  .loader-spinner {
+    animation: none;
+    border-color: var(--cyan);
+  }
+}
+
+.reduced-motion-notice {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reduced-motion-notice::before {
+  content: '⚡';
+}
+
+/* ============================================
+   KEYBOARD SHORTCUTS HELP OVERLAY
+   ============================================ */
+.keyboard-help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.keyboard-help-modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  width: 90%;
+  max-width: 400px;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.keyboard-help-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.keyboard-help-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.keyboard-help-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.keyboard-help-close:hover {
+  background: var(--bg-card);
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.keyboard-help-content {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.shortcut-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.5rem;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--cyan);
+  box-shadow: 0 2px 0 var(--border);
+}
+
+.shortcut-alt {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-left: 0.35rem;
+}
+
+.shortcut-action {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.keyboard-help-footer {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.keyboard-help-footer span {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.keyboard-help-footer kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 0.4rem;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin: 0 0.2rem;
+}
+
+/* ============================================
+   FOCUS STYLES FOR ACCESSIBILITY
+   ============================================ */
+*:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+/* Skip link for keyboard users */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--cyan);
+  color: var(--bg);
+  padding: 0.5rem 1rem;
+  z-index: 10000;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 0;
+}

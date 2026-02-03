@@ -3,6 +3,12 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { ScrollControls, Scroll, useScroll, Stars, MeshDistortMaterial, Float, MeshWobbleMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 
+// Custom components and hooks
+import ThreeErrorBoundary from './components/ThreeErrorBoundary';
+import { useKeyboardNavigation, SHORTCUT_HELP } from './hooks/useKeyboardNavigation';
+import { useReducedMotion } from './hooks/useReducedMotion';
+import { initWebVitals, trackCustomMetric, mark, measure } from './utils/webVitals';
+
 // ============================================================
 // CONTROLS CONTEXT - Share tweakable values across components
 // ============================================================
@@ -1791,16 +1797,51 @@ export default function App() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('code');
   const [controls, setControls] = useState({});
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+
+  // Reduced motion support for accessibility
+  const { prefersReducedMotion } = useReducedMotion();
+
+  // Initialize web vitals monitoring
+  useEffect(() => {
+    mark('app-init');
+    initWebVitals((metric) => {
+      // Can be extended to send to analytics service
+      if (process.env.NODE_ENV === 'production') {
+        // Example: sendToAnalytics(metric);
+      }
+    });
+  }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      measure('app-load-time', 'app-init');
+      trackCustomMetric('initial-load', performance.now());
+    }, 800);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     setActiveExample(0);
     setControls({}); // Reset controls when category changes
+    trackCustomMetric('category-change', 1, 'count');
   }, [activeCategory]);
+
+  // Keyboard navigation
+  const currentAnimations = ANIMATIONS[activeCategory];
+  useKeyboardNavigation({
+    categories: CATEGORIES,
+    activeCategory,
+    setActiveCategory,
+    activeExample,
+    setActiveExample,
+    currentAnimations,
+    isPanelOpen,
+    setIsPanelOpen,
+    setControls,
+    onShowHelp: () => setShowKeyboardHelp(prev => !prev)
+  });
 
   // Performance: Memoize event handlers to prevent unnecessary re-renders
   // Note: setState functions from useState are stable and don't need to be in dependency arrays
@@ -1816,7 +1857,10 @@ export default function App() {
     setActiveExample(exampleIndex);
   }, []);
 
-  const currentAnimations = ANIMATIONS[activeCategory];
+  const handleCloseKeyboardHelp = useCallback(() => {
+    setShowKeyboardHelp(false);
+  }, []);
+
   const CurrentComponent = currentAnimations[activeExample].component;
   const currentInfo = currentAnimations[activeExample];
 
@@ -1872,20 +1916,31 @@ export default function App() {
           </div>
           
           <div className="canvas-container">
-            {/* Performance: Canvas key excludes controls to prevent WebGL context re-creation.
-                Components react to control changes via ControlsContext instead. */}
-            <Canvas
-              key={`${activeCategory}-${activeExample}`}
-              camera={{ position: [0, 0, 10], fov: 55 }}
-              gl={{ antialias: true, powerPreference: 'high-performance' }}
-            >
-              <color attach="background" args={['#050505']} />
-              <Suspense fallback={null}>
-                <AnimationScene pages={3}>
-                  <CurrentComponent />
-                </AnimationScene>
-              </Suspense>
-            </Canvas>
+            {/* Reduced motion notice for accessibility */}
+            {prefersReducedMotion && (
+              <div className="reduced-motion-notice" data-testid="reduced-motion-notice">
+                <span>Animations reduced for accessibility</span>
+              </div>
+            )}
+
+            {/* Error Boundary for WebGL/Three.js errors */}
+            <ThreeErrorBoundary>
+              {/* Performance: Canvas key excludes controls to prevent WebGL context re-creation.
+                  Components react to control changes via ControlsContext instead. */}
+              <Canvas
+                key={`${activeCategory}-${activeExample}`}
+                camera={{ position: [0, 0, 10], fov: 55 }}
+                gl={{ antialias: true, powerPreference: 'high-performance' }}
+                frameloop={prefersReducedMotion ? 'demand' : 'always'}
+              >
+                <color attach="background" args={['#050505']} />
+                <Suspense fallback={null}>
+                  <AnimationScene pages={3}>
+                    <CurrentComponent />
+                  </AnimationScene>
+                </Suspense>
+              </Canvas>
+            </ThreeErrorBoundary>
           </div>
           
           <div className="info-panel" data-testid="info-panel">
@@ -1908,6 +1963,36 @@ export default function App() {
           controls={controls}
           setControls={setControls}
         />
+
+        {/* Keyboard Shortcuts Help Overlay */}
+        {showKeyboardHelp && (
+          <div className="keyboard-help-overlay" onClick={handleCloseKeyboardHelp} data-testid="keyboard-help">
+            <div className="keyboard-help-modal" onClick={e => e.stopPropagation()}>
+              <div className="keyboard-help-header">
+                <h3>Keyboard Shortcuts</h3>
+                <button className="keyboard-help-close" onClick={handleCloseKeyboardHelp}>×</button>
+              </div>
+              <div className="keyboard-help-content">
+                {SHORTCUT_HELP.map((shortcut, i) => (
+                  <div key={i} className="shortcut-row">
+                    <div className="shortcut-keys">
+                      {shortcut.keys.map((key, j) => (
+                        <kbd key={j}>{key}</kbd>
+                      ))}
+                      {shortcut.alternative && (
+                        <span className="shortcut-alt">or {shortcut.alternative}</span>
+                      )}
+                    </div>
+                    <span className="shortcut-action">{shortcut.action}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="keyboard-help-footer">
+                <span>Press <kbd>?</kbd> or <kbd>Esc</kbd> to close</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ControlsContext.Provider>
   );
