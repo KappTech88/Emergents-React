@@ -1,12 +1,16 @@
 import React, { Suspense, useRef, useMemo, useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { ScrollControls, Scroll, useScroll, Stars, MeshDistortMaterial, Float, MeshWobbleMaterial } from '@react-three/drei';
+import { ScrollControls, Scroll, useScroll, Stars, MeshDistortMaterial, Float, MeshWobbleMaterial, OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Custom components and hooks
 import ThreeErrorBoundary from './components/ThreeErrorBoundary';
+import InteractiveMesh, { InteractiveGroup } from './components/InteractiveMesh';
+import Tooltip3D, { FloatingLabel, InteractionHint } from './components/Tooltip3D';
+import { SelectionProvider } from './contexts/SelectionContext';
 import { useKeyboardNavigation, SHORTCUT_HELP } from './hooks/useKeyboardNavigation';
 import { useReducedMotion } from './hooks/useReducedMotion';
+import { DraggableValue } from './hooks/useDragParameter';
 import { initWebVitals, trackCustomMetric, mark, measure } from './utils/webVitals';
 
 // ============================================================
@@ -509,7 +513,7 @@ const ParticleTunnel = React.memo(() => {
 });
 
 // ============================================================
-// VELOCITY DEFORMATION
+// VELOCITY DEFORMATION - With interactive hover effects
 // ============================================================
 
 const MorphingSphere = React.memo(() => {
@@ -517,30 +521,68 @@ const MorphingSphere = React.memo(() => {
   const scroll = useScroll();
   const velocity = useRef(0);
   const controls = useControls();
-  
+  const [hovered, setHovered] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+
   const distortIntensity = controls.distortIntensity || 0.5;
   const baseSpeed = controls.baseSpeed || 2;
   const velocityMultiplier = controls.velocityMultiplier || 80;
 
+  useEffect(() => {
+    // Hide hint after first scroll
+    const hideHint = () => setShowHint(false);
+    window.addEventListener('scroll', hideHint, { once: true });
+    return () => window.removeEventListener('scroll', hideHint);
+  }, []);
+
   useFrame((state) => {
     if (!meshRef.current) return;
     velocity.current = THREE.MathUtils.lerp(velocity.current, Math.abs(scroll.delta) * velocityMultiplier, 0.08);
-    
+
     meshRef.current.rotation.x = state.clock.elapsedTime * 0.4;
     meshRef.current.rotation.y = state.clock.elapsedTime * 0.6;
-    
+
+    // Hover scale effect
+    const targetScale = hovered ? 2.7 : 2.5;
+    meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+
     if (meshRef.current.material) {
       meshRef.current.material.distort = 0.2 + Math.min(velocity.current * distortIntensity, 0.8);
       meshRef.current.material.speed = baseSpeed + velocity.current * 0.05;
+      meshRef.current.material.emissiveIntensity = hovered ? 0.8 : 0.5;
     }
   });
 
   return (
     <Float speed={1.5} rotationIntensity={0.3}>
-      <mesh ref={meshRef} scale={2.5}>
+      <mesh
+        ref={meshRef}
+        scale={2.5}
+        onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+      >
         <icosahedronGeometry args={[1, 8]} />
         <MeshDistortMaterial color="#a855f7" emissive="#7c3aed" emissiveIntensity={0.5} roughness={0.15} metalness={0.85} distort={0.3} speed={baseSpeed} />
       </mesh>
+
+      {hovered && (
+        <Tooltip3D
+          position={[0, 3.5, 0]}
+          visible={true}
+          title="Morphing Sphere"
+          description="Scroll faster to increase distortion"
+          variant="info"
+        />
+      )}
+
+      {showHint && !hovered && (
+        <InteractionHint
+          position={[0, -3, 0]}
+          visible={true}
+          action="scroll"
+          customText="Scroll to morph"
+        />
+      )}
     </Float>
   );
 });
@@ -550,7 +592,8 @@ const WobblingTorus = React.memo(() => {
   const scroll = useScroll();
   const velocity = useRef(0);
   const controls = useControls();
-  
+  const [hovered, setHovered] = useState(false);
+
   const distortIntensity = controls.distortIntensity || 0.8;
   const baseSpeed = controls.baseSpeed || 2;
   const velocityMultiplier = controls.velocityMultiplier || 60;
@@ -558,21 +601,41 @@ const WobblingTorus = React.memo(() => {
   useFrame((state) => {
     if (!meshRef.current) return;
     velocity.current = THREE.MathUtils.lerp(velocity.current, Math.abs(scroll.delta) * velocityMultiplier, 0.1);
-    
+
     meshRef.current.rotation.x = state.clock.elapsedTime * 0.3;
     meshRef.current.rotation.y = state.clock.elapsedTime * 0.5;
-    
+
+    // Hover scale effect
+    const targetScale = hovered ? 2.2 : 2;
+    meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+
     if (meshRef.current.material) {
       meshRef.current.material.factor = 0.5 + velocity.current * distortIntensity;
+      meshRef.current.material.emissiveIntensity = hovered ? 0.7 : 0.4;
     }
   });
 
   return (
     <Float speed={2} rotationIntensity={0.4}>
-      <mesh ref={meshRef} scale={2}>
+      <mesh
+        ref={meshRef}
+        scale={2}
+        onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+      >
         <torusKnotGeometry args={[1, 0.35, 128, 32]} />
         <MeshWobbleMaterial color="#ec4899" emissive="#be185d" emissiveIntensity={0.4} factor={0.5} speed={baseSpeed} />
       </mesh>
+
+      {hovered && (
+        <Tooltip3D
+          position={[0, 3, 0]}
+          visible={true}
+          title="Wobbling Torus Knot"
+          description="Scroll velocity controls wobble intensity"
+          variant="info"
+        />
+      )}
     </Float>
   );
 });
@@ -686,7 +749,7 @@ const NoiseSphere = React.memo(() => {
 });
 
 // ============================================================
-// EXPLODED VIEWS
+// EXPLODED VIEWS - With interactive hover effects
 // ============================================================
 
 const ExplodedCube = React.memo(() => {
@@ -694,30 +757,37 @@ const ExplodedCube = React.memo(() => {
   const partsRef = useRef([]);
   const scroll = useScroll();
   const controls = useControls();
-  
+  const [hoveredPart, setHoveredPart] = useState(null);
+  const [selectedPart, setSelectedPart] = useState(null);
+
   const maxExplosion = controls.maxExplosion || 4;
   const rotationSpeed = controls.rotationSpeed || 0.2;
 
   const parts = useMemo(() => [
-    { pos: [0, 1, 0], rot: [0, 0, 0], color: '#22d3ee', dir: [0, 1, 0] },
-    { pos: [0, -1, 0], rot: [0, 0, 0], color: '#06b6d4', dir: [0, -1, 0] },
-    { pos: [1, 0, 0], rot: [0, 0, Math.PI/2], color: '#0891b2', dir: [1, 0, 0] },
-    { pos: [-1, 0, 0], rot: [0, 0, Math.PI/2], color: '#0e7490', dir: [-1, 0, 0] },
-    { pos: [0, 0, 1], rot: [Math.PI/2, 0, 0], color: '#155e75', dir: [0, 0, 1] },
-    { pos: [0, 0, -1], rot: [Math.PI/2, 0, 0], color: '#164e63', dir: [0, 0, -1] },
+    { pos: [0, 1, 0], rot: [0, 0, 0], color: '#22d3ee', dir: [0, 1, 0], name: 'Top' },
+    { pos: [0, -1, 0], rot: [0, 0, 0], color: '#06b6d4', dir: [0, -1, 0], name: 'Bottom' },
+    { pos: [1, 0, 0], rot: [0, 0, Math.PI/2], color: '#0891b2', dir: [1, 0, 0], name: 'Right' },
+    { pos: [-1, 0, 0], rot: [0, 0, Math.PI/2], color: '#0e7490', dir: [-1, 0, 0], name: 'Left' },
+    { pos: [0, 0, 1], rot: [Math.PI/2, 0, 0], color: '#155e75', dir: [0, 0, 1], name: 'Front' },
+    { pos: [0, 0, -1], rot: [Math.PI/2, 0, 0], color: '#164e63', dir: [0, 0, -1], name: 'Back' },
   ], []);
 
   useFrame((state) => {
     if (!groupRef.current) return;
     const explosion = scroll.range(0.2, 0.6);
     const dist = explosion * maxExplosion;
-    
+
     partsRef.current.forEach((mesh, i) => {
       if (!mesh) return;
       const p = parts[i];
       mesh.position.set(p.pos[0] + p.dir[0] * dist, p.pos[1] + p.dir[1] * dist, p.pos[2] + p.dir[2] * dist);
+
+      // Hover scale effect
+      const isHovered = hoveredPart === i || selectedPart === i;
+      const targetScale = isHovered ? 1.1 : 1;
+      mesh.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
     });
-    
+
     groupRef.current.rotation.x = state.clock.elapsedTime * rotationSpeed;
     groupRef.current.rotation.y = state.clock.elapsedTime * rotationSpeed * 1.5;
   });
@@ -725,13 +795,45 @@ const ExplodedCube = React.memo(() => {
   return (
     <group ref={groupRef}>
       {parts.map((p, i) => (
-        <mesh key={i} ref={el => partsRef.current[i] = el} position={p.pos} rotation={p.rot}>
-          <boxGeometry args={[2.2, 0.2, 2.2]} />
-          <meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={0.35} metalness={0.9} roughness={0.1} />
-        </mesh>
+        <React.Fragment key={i}>
+          <mesh
+            ref={el => partsRef.current[i] = el}
+            position={p.pos}
+            rotation={p.rot}
+            onPointerOver={(e) => { e.stopPropagation(); setHoveredPart(i); document.body.style.cursor = 'pointer'; }}
+            onPointerOut={() => { setHoveredPart(null); document.body.style.cursor = 'default'; }}
+            onClick={(e) => { e.stopPropagation(); setSelectedPart(selectedPart === i ? null : i); }}
+          >
+            <boxGeometry args={[2.2, 0.2, 2.2]} />
+            <meshStandardMaterial
+              color={p.color}
+              emissive={p.color}
+              emissiveIntensity={(hoveredPart === i || selectedPart === i) ? 0.7 : 0.35}
+              metalness={0.9}
+              roughness={0.1}
+            />
+          </mesh>
+          {(hoveredPart === i || selectedPart === i) && (
+            <FloatingLabel
+              position={[p.pos[0] + p.dir[0] * 2, p.pos[1] + p.dir[1] * 2 + 0.5, p.pos[2] + p.dir[2] * 2]}
+              text={p.name}
+              variant={selectedPart === i ? 'selected' : 'highlight'}
+            />
+          )}
+        </React.Fragment>
       ))}
       <mesh scale={0.6}><icosahedronGeometry args={[1, 2]} /><meshBasicMaterial color="#fff" wireframe /></mesh>
       <pointLight intensity={3} color="#22d3ee" distance={8} />
+
+      {selectedPart !== null && (
+        <Tooltip3D
+          position={[0, 3, 0]}
+          visible={true}
+          title={`Selected: ${parts[selectedPart].name} Face`}
+          description="Click another face or same to deselect"
+          hint="Scroll to explode/collapse"
+        />
+      )}
     </group>
   );
 });
@@ -741,7 +843,8 @@ const ExplodedIcosahedron = React.memo(() => {
   const partsRef = useRef([]);
   const scroll = useScroll();
   const controls = useControls();
-  
+  const [hoveredPart, setHoveredPart] = useState(null);
+
   const maxExplosion = controls.maxExplosion || 3;
   const rotationSpeed = controls.rotationSpeed || 0.25;
 
@@ -753,7 +856,8 @@ const ExplodedIcosahedron = React.memo(() => {
       faces.push({
         pos: [Math.sin(angle1) * 1.2, Math.cos(angle2) * 1.2 - 0.5, Math.cos(angle1) * 1.2],
         dir: [Math.sin(angle1), Math.cos(angle2) - 0.4, Math.cos(angle1)],
-        color: `hsl(${280 + i * 4}, 70%, 55%)`
+        color: `hsl(${280 + i * 4}, 70%, 55%)`,
+        id: i + 1
       });
     }
     return faces;
@@ -763,22 +867,39 @@ const ExplodedIcosahedron = React.memo(() => {
     if (!groupRef.current) return;
     const explosion = scroll.range(0.2, 0.6);
     const dist = explosion * maxExplosion;
-    
+
     partsRef.current.forEach((mesh, i) => {
       if (!mesh) return;
       const p = parts[i];
       mesh.position.set(p.pos[0] + p.dir[0] * dist, p.pos[1] + p.dir[1] * dist, p.pos[2] + p.dir[2] * dist);
+
+      // Hover effect
+      const isHovered = hoveredPart === i;
+      const targetScale = isHovered ? 1.3 : 1;
+      mesh.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
     });
-    
+
     groupRef.current.rotation.y = state.clock.elapsedTime * rotationSpeed;
   });
 
   return (
     <group ref={groupRef} scale={2}>
       {parts.map((p, i) => (
-        <mesh key={i} ref={el => partsRef.current[i] = el} position={p.pos}>
+        <mesh
+          key={i}
+          ref={el => partsRef.current[i] = el}
+          position={p.pos}
+          onPointerOver={(e) => { e.stopPropagation(); setHoveredPart(i); document.body.style.cursor = 'pointer'; }}
+          onPointerOut={() => { setHoveredPart(null); document.body.style.cursor = 'default'; }}
+        >
           <tetrahedronGeometry args={[0.35]} />
-          <meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={0.3} metalness={0.8} roughness={0.2} />
+          <meshStandardMaterial
+            color={p.color}
+            emissive={p.color}
+            emissiveIntensity={hoveredPart === i ? 0.7 : 0.3}
+            metalness={0.8}
+            roughness={0.2}
+          />
         </mesh>
       ))}
       <pointLight intensity={2} color="#a855f7" distance={6} />
@@ -787,17 +908,26 @@ const ExplodedIcosahedron = React.memo(() => {
 });
 
 // ============================================================
-// ROTATION MAPPING
+// ROTATION MAPPING - With interactive hover effects
 // ============================================================
 
 const WireframeGlobe = React.memo(() => {
   const groupRef = useRef();
   const innerRef = useRef();
+  const outerRef = useRef();
   const scroll = useScroll();
   const controls = useControls();
-  
+  const [hovered, setHovered] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+
   const rotationMultiplier = controls.rotationMultiplier || 4;
   const tiltAmount = controls.tiltAmount || 0.2;
+
+  useEffect(() => {
+    const hideHint = () => setShowHint(false);
+    window.addEventListener('scroll', hideHint, { once: true });
+    return () => window.removeEventListener('scroll', hideHint);
+  }, []);
 
   useFrame((state) => {
     if (!groupRef.current) return;
@@ -805,25 +935,59 @@ const WireframeGlobe = React.memo(() => {
     groupRef.current.rotation.y = rot;
     groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.3) * tiltAmount;
     if (innerRef.current) innerRef.current.rotation.y = -rot * 0.5;
+
+    // Hover scale effect on outer sphere
+    if (outerRef.current) {
+      const targetScale = hovered ? 1.08 : 1;
+      outerRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+    }
   });
 
   return (
     <group ref={groupRef}>
-      <mesh><sphereGeometry args={[3, 40, 40]} /><meshStandardMaterial color="#7c3aed" emissive="#a855f7" emissiveIntensity={0.4} wireframe /></mesh>
+      <mesh
+        ref={outerRef}
+        onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+      >
+        <sphereGeometry args={[3, 40, 40]} />
+        <meshStandardMaterial color="#7c3aed" emissive="#a855f7" emissiveIntensity={hovered ? 0.7 : 0.4} wireframe />
+      </mesh>
       <mesh scale={0.8}><sphereGeometry args={[3, 28, 28]} /><meshStandardMaterial color="#8b5cf6" emissive="#c084fc" emissiveIntensity={0.25} wireframe transparent opacity={0.5} /></mesh>
-      <mesh ref={innerRef} scale={0.4}><icosahedronGeometry args={[3, 3]} /><meshStandardMaterial color="#c084fc" emissive="#e879f9" emissiveIntensity={0.6} metalness={0.8} roughness={0.2} /></mesh>
+      <mesh ref={innerRef} scale={0.4}><icosahedronGeometry args={[3, 3]} /><meshStandardMaterial color="#c084fc" emissive="#e879f9" emissiveIntensity={hovered ? 0.9 : 0.6} metalness={0.8} roughness={0.2} /></mesh>
       <mesh rotation={[Math.PI/2, 0, 0]}><torusGeometry args={[4, 0.025, 16, 100]} /><meshBasicMaterial color="#a855f7" transparent opacity={0.7} /></mesh>
       <mesh rotation={[Math.PI/3, Math.PI/5, 0]}><torusGeometry args={[4.3, 0.025, 16, 100]} /><meshBasicMaterial color="#8b5cf6" transparent opacity={0.5} /></mesh>
       <pointLight intensity={4} color="#c084fc" distance={15} />
+
+      {hovered && (
+        <Tooltip3D
+          position={[0, 4.5, 0]}
+          visible={true}
+          title="Wireframe Globe"
+          description="Scroll maps directly to Y-axis rotation"
+          variant="info"
+        />
+      )}
+
+      {showHint && !hovered && (
+        <InteractionHint
+          position={[0, -4, 0]}
+          visible={true}
+          action="scroll"
+          customText="Scroll to rotate"
+        />
+      )}
     </group>
   );
 });
 
 const DNAHelix = React.memo(() => {
   const groupRef = useRef();
+  const nodesRef = useRef([]);
   const scroll = useScroll();
   const controls = useControls();
-  
+  const [hoveredNode, setHoveredNode] = useState(null);
+
   const rotationMultiplier = controls.rotationMultiplier || 6;
 
   const helixPoints = useMemo(() => {
@@ -833,7 +997,8 @@ const DNAHelix = React.memo(() => {
       points.push({
         pos1: [Math.cos(t) * 1.5, i * 0.3 - 4.5, Math.sin(t) * 1.5],
         pos2: [Math.cos(t + Math.PI) * 1.5, i * 0.3 - 4.5, Math.sin(t + Math.PI) * 1.5],
-        color: `hsl(${180 + i * 6}, 75%, 55%)`
+        color: `hsl(${180 + i * 6}, 75%, 55%)`,
+        id: i
       });
     }
     return points;
@@ -842,14 +1007,39 @@ const DNAHelix = React.memo(() => {
   useFrame(() => {
     if (!groupRef.current) return;
     groupRef.current.rotation.y = scroll.offset * Math.PI * rotationMultiplier;
+
+    // Apply hover scale effect to nodes
+    nodesRef.current.forEach((node, i) => {
+      if (node) {
+        const isHovered = hoveredNode === Math.floor(i / 2);
+        const targetScale = isHovered ? 1.5 : 1;
+        node.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
+      }
+    });
   });
 
   return (
     <group ref={groupRef}>
       {helixPoints.map((p, i) => (
         <group key={i}>
-          <mesh position={p.pos1}><sphereGeometry args={[0.2, 16, 16]} /><meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={0.4} /></mesh>
-          <mesh position={p.pos2}><sphereGeometry args={[0.2, 16, 16]} /><meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={0.4} /></mesh>
+          <mesh
+            ref={el => nodesRef.current[i * 2] = el}
+            position={p.pos1}
+            onPointerOver={(e) => { e.stopPropagation(); setHoveredNode(i); document.body.style.cursor = 'pointer'; }}
+            onPointerOut={() => { setHoveredNode(null); document.body.style.cursor = 'default'; }}
+          >
+            <sphereGeometry args={[0.2, 16, 16]} />
+            <meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={hoveredNode === i ? 0.9 : 0.4} />
+          </mesh>
+          <mesh
+            ref={el => nodesRef.current[i * 2 + 1] = el}
+            position={p.pos2}
+            onPointerOver={(e) => { e.stopPropagation(); setHoveredNode(i); document.body.style.cursor = 'pointer'; }}
+            onPointerOut={() => { setHoveredNode(null); document.body.style.cursor = 'default'; }}
+          >
+            <sphereGeometry args={[0.2, 16, 16]} />
+            <meshStandardMaterial color={p.color} emissive={p.color} emissiveIntensity={hoveredNode === i ? 0.9 : 0.4} />
+          </mesh>
           {i % 3 === 0 && (
             <mesh position={[(p.pos1[0] + p.pos2[0])/2, p.pos1[1], (p.pos1[2] + p.pos2[2])/2]} rotation={[0, Math.atan2(p.pos2[2] - p.pos1[2], p.pos2[0] - p.pos1[0]), Math.PI/2]}>
               <cylinderGeometry args={[0.05, 0.05, 3, 8]} />
@@ -858,28 +1048,40 @@ const DNAHelix = React.memo(() => {
           )}
         </group>
       ))}
+
+      {hoveredNode !== null && (
+        <Tooltip3D
+          position={[0, helixPoints[hoveredNode].pos1[1] + 1, 0]}
+          visible={true}
+          title={`Base Pair ${hoveredNode + 1}`}
+          description="Scroll rotates the entire helix structure"
+          variant="info"
+        />
+      )}
     </group>
   );
 });
 
 // ============================================================
-// PARALLAX LAYERS
+// PARALLAX LAYERS - With interactive hover effects
 // ============================================================
 
 const FloatingCards = React.memo(() => {
   const cardsRef = useRef([]);
   const scroll = useScroll();
   const controls = useControls();
-  
+  const [hoveredCard, setHoveredCard] = useState(null);
+  const [selectedCard, setSelectedCard] = useState(null);
+
   const speedMultiplier = controls.speedMultiplier || 8;
 
   const cards = useMemo(() => [
-    { pos: [-3, 2, -5], speed: 0.3, color: '#22d3ee', size: [1.5, 2, 0.1] },
-    { pos: [3, -1, -8], speed: 0.5, color: '#a855f7', size: [2, 1.2, 0.1] },
-    { pos: [-2, -2, -3], speed: 0.2, color: '#ec4899', size: [1.2, 1.8, 0.1] },
-    { pos: [2, 1.5, -6], speed: 0.4, color: '#10b981', size: [1.8, 1, 0.1] },
-    { pos: [0, 0, -10], speed: 0.6, color: '#f59e0b', size: [2.5, 1.5, 0.1] },
-    { pos: [-4, 0, -7], speed: 0.45, color: '#6366f1', size: [1.4, 2.2, 0.1] },
+    { pos: [-3, 2, -5], speed: 0.3, color: '#22d3ee', size: [1.5, 2, 0.1], name: 'Cyan Card', depth: 'Mid' },
+    { pos: [3, -1, -8], speed: 0.5, color: '#a855f7', size: [2, 1.2, 0.1], name: 'Purple Card', depth: 'Far' },
+    { pos: [-2, -2, -3], speed: 0.2, color: '#ec4899', size: [1.2, 1.8, 0.1], name: 'Pink Card', depth: 'Near' },
+    { pos: [2, 1.5, -6], speed: 0.4, color: '#10b981', size: [1.8, 1, 0.1], name: 'Green Card', depth: 'Mid' },
+    { pos: [0, 0, -10], speed: 0.6, color: '#f59e0b', size: [2.5, 1.5, 0.1], name: 'Orange Card', depth: 'Very Far' },
+    { pos: [-4, 0, -7], speed: 0.45, color: '#6366f1', size: [1.4, 2.2, 0.1], name: 'Indigo Card', depth: 'Far' },
   ], []);
 
   useFrame((state) => {
@@ -888,17 +1090,54 @@ const FloatingCards = React.memo(() => {
       const c = cards[i];
       card.position.y = c.pos[1] + scroll.offset * c.speed * speedMultiplier;
       card.rotation.y = Math.sin(state.clock.elapsedTime + i) * 0.1;
+
+      // Hover scale effect
+      const isActive = hoveredCard === i || selectedCard === i;
+      const targetScale = isActive ? 1.15 : 1;
+      card.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
     });
   });
 
   return (
     <group>
       {cards.map((c, i) => (
-        <mesh key={i} ref={el => cardsRef.current[i] = el} position={c.pos}>
-          <boxGeometry args={c.size} />
-          <meshStandardMaterial color={c.color} emissive={c.color} emissiveIntensity={0.3} metalness={0.5} roughness={0.3} />
-        </mesh>
+        <React.Fragment key={i}>
+          <mesh
+            ref={el => cardsRef.current[i] = el}
+            position={c.pos}
+            onPointerOver={(e) => { e.stopPropagation(); setHoveredCard(i); document.body.style.cursor = 'pointer'; }}
+            onPointerOut={() => { setHoveredCard(null); document.body.style.cursor = 'default'; }}
+            onClick={(e) => { e.stopPropagation(); setSelectedCard(selectedCard === i ? null : i); }}
+          >
+            <boxGeometry args={c.size} />
+            <meshStandardMaterial
+              color={c.color}
+              emissive={c.color}
+              emissiveIntensity={(hoveredCard === i || selectedCard === i) ? 0.7 : 0.3}
+              metalness={0.5}
+              roughness={0.3}
+            />
+          </mesh>
+
+          {(hoveredCard === i || selectedCard === i) && (
+            <FloatingLabel
+              position={[c.pos[0], c.pos[1] + c.size[1] + 0.5, c.pos[2]]}
+              text={c.name}
+              variant={selectedCard === i ? 'selected' : 'highlight'}
+            />
+          )}
+        </React.Fragment>
       ))}
+
+      {selectedCard !== null && (
+        <Tooltip3D
+          position={[0, 4, 0]}
+          visible={true}
+          title={cards[selectedCard].name}
+          description={`Speed: ${cards[selectedCard].speed}x | Depth: ${cards[selectedCard].depth}`}
+          hint="Nearer cards move slower (parallax effect)"
+        />
+      )}
     </group>
   );
 });
@@ -907,7 +1146,9 @@ const MountainLayers = React.memo(() => {
   const layersRef = useRef([]);
   const scroll = useScroll();
   const controls = useControls();
-  
+  const [hoveredLayer, setHoveredLayer] = useState(null);
+  const [showHint, setShowHint] = useState(true);
+
   const speedMultiplier = controls.speedMultiplier || 8;
   const depthRange = controls.depthRange || 12;
 
@@ -915,30 +1156,67 @@ const MountainLayers = React.memo(() => {
     const baseZ = -15;
     const spacing = depthRange / 5;
     return [
-      { z: baseZ, color: '#1e1b4b', height: 4, speed: 0.1 },
-      { z: baseZ + spacing, color: '#312e81', height: 3.5, speed: 0.2 },
-      { z: baseZ + spacing * 2, color: '#4338ca', height: 3, speed: 0.35 },
-      { z: baseZ + spacing * 3, color: '#6366f1', height: 2.5, speed: 0.5 },
-      { z: baseZ + spacing * 4, color: '#818cf8', height: 2, speed: 0.7 },
+      { z: baseZ, color: '#1e1b4b', height: 4, speed: 0.1, name: 'Far Mountains' },
+      { z: baseZ + spacing, color: '#312e81', height: 3.5, speed: 0.2, name: 'Distant Hills' },
+      { z: baseZ + spacing * 2, color: '#4338ca', height: 3, speed: 0.35, name: 'Mid Range' },
+      { z: baseZ + spacing * 3, color: '#6366f1', height: 2.5, speed: 0.5, name: 'Near Hills' },
+      { z: baseZ + spacing * 4, color: '#818cf8', height: 2, speed: 0.7, name: 'Foreground' },
     ];
   }, [depthRange]);
+
+  useEffect(() => {
+    const hideHint = () => setShowHint(false);
+    window.addEventListener('scroll', hideHint, { once: true });
+    return () => window.removeEventListener('scroll', hideHint);
+  }, []);
 
   useFrame(() => {
     layersRef.current.forEach((layer, i) => {
       if (!layer) return;
       layer.position.y = -2 + scroll.offset * layers[i].speed * speedMultiplier;
+
+      // Hover brightness effect
+      if (layer.material) {
+        const targetOpacity = hoveredLayer === i ? 1 : 0.85;
+        layer.material.opacity = THREE.MathUtils.lerp(layer.material.opacity, targetOpacity, 0.1);
+      }
     });
   });
 
   return (
     <group>
       {layers.map((l, i) => (
-        <mesh key={i} ref={el => layersRef.current[i] = el} position={[0, -2, l.z]}>
+        <mesh
+          key={i}
+          ref={el => layersRef.current[i] = el}
+          position={[0, -2, l.z]}
+          onPointerOver={(e) => { e.stopPropagation(); setHoveredLayer(i); document.body.style.cursor = 'pointer'; }}
+          onPointerOut={() => { setHoveredLayer(null); document.body.style.cursor = 'default'; }}
+        >
           <planeGeometry args={[20, l.height * 2]} />
-          <meshBasicMaterial color={l.color} side={THREE.DoubleSide} />
+          <meshBasicMaterial color={l.color} side={THREE.DoubleSide} transparent opacity={0.85} />
         </mesh>
       ))}
       <mesh position={[0, 4, -20]}><circleGeometry args={[1.5, 32]} /><meshBasicMaterial color="#fef3c7" /></mesh>
+
+      {hoveredLayer !== null && (
+        <Tooltip3D
+          position={[0, 2, layers[hoveredLayer].z + 2]}
+          visible={true}
+          title={layers[hoveredLayer].name}
+          description={`Speed: ${layers[hoveredLayer].speed}x - Farther layers move slower`}
+          variant="info"
+        />
+      )}
+
+      {showHint && hoveredLayer === null && (
+        <InteractionHint
+          position={[0, -3.5, -8]}
+          visible={true}
+          action="scroll"
+          customText="Scroll to see parallax"
+        />
+      )}
     </group>
   );
 });
@@ -1180,7 +1458,7 @@ const OrbitPath = React.memo(() => {
 });
 
 // ============================================================
-// MORPH TARGETS
+// MORPH TARGETS - With interactive hover effects
 // ============================================================
 
 // Example 1: Shape Morph - Geometry interpolates between shapes
@@ -1188,20 +1466,25 @@ const ShapeMorph = React.memo(() => {
   const meshRef = useRef();
   const scroll = useScroll();
   const controls = useControls();
-  
+  const [hovered, setHovered] = useState(false);
+  const [currentStage, setCurrentStage] = useState(0);
+
   const morphSpeed = controls.morphSpeed || 1;
+  const stageNames = ['Cube', 'Disc', 'Pillar'];
 
   useFrame((state) => {
     if (!meshRef.current) return;
     const t = scroll.offset * morphSpeed;
-    
+
     // Morph via scale transformation
     const phase = t * 3;
     const stage = Math.floor(phase) % 3;
     const progress = phase - Math.floor(phase);
-    
+
+    setCurrentStage(stage);
+
     let scaleX, scaleY, scaleZ;
-    
+
     if (stage === 0) {
       // Cube to flat disc
       scaleX = THREE.MathUtils.lerp(1, 2.5, progress);
@@ -1218,18 +1501,41 @@ const ShapeMorph = React.memo(() => {
       scaleY = THREE.MathUtils.lerp(4, 1, progress);
       scaleZ = THREE.MathUtils.lerp(0.3, 1, progress);
     }
-    
-    meshRef.current.scale.set(scaleX, scaleY, scaleZ);
+
+    // Hover scale boost
+    const hoverBoost = hovered ? 1.1 : 1;
+    meshRef.current.scale.set(scaleX * hoverBoost, scaleY * hoverBoost, scaleZ * hoverBoost);
     meshRef.current.rotation.y = state.clock.elapsedTime * 0.5;
   });
 
   return (
     <group>
-      <mesh ref={meshRef}>
+      <mesh
+        ref={meshRef}
+        onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+      >
         <boxGeometry args={[1.5, 1.5, 1.5]} />
-        <meshStandardMaterial color="#ec4899" emissive="#be185d" emissiveIntensity={0.4} metalness={0.8} roughness={0.2} />
+        <meshStandardMaterial color="#ec4899" emissive="#be185d" emissiveIntensity={hovered ? 0.7 : 0.4} metalness={0.8} roughness={0.2} />
       </mesh>
       <pointLight position={[3, 3, 3]} intensity={2} color="#ec4899" />
+
+      {hovered && (
+        <Tooltip3D
+          position={[0, 3, 0]}
+          visible={true}
+          title={`Stage: ${stageNames[currentStage]}`}
+          description="Scroll to morph through Cube → Disc → Pillar"
+          variant="info"
+        />
+      )}
+
+      <InteractionHint
+        position={[0, -2.5, 0]}
+        visible={!hovered}
+        action="scroll"
+        customText="Scroll to morph shape"
+      />
     </group>
   );
 });
@@ -1239,7 +1545,9 @@ const BlobMorph = React.memo(() => {
   const meshRef = useRef();
   const scroll = useScroll();
   const controls = useControls();
-  
+  const [hovered, setHovered] = useState(false);
+  const [distortLevel, setDistortLevel] = useState(0);
+
   const morphSpeed = controls.morphSpeed || 1;
   const morphEasing = controls.morphEasing || 2;
 
@@ -1247,19 +1555,30 @@ const BlobMorph = React.memo(() => {
     if (!meshRef.current) return;
     const t = scroll.offset;
     const time = state.clock.elapsedTime;
-    
+
     // Animated distortion based on scroll
     const distort = 0.2 + t * 0.6;
+    setDistortLevel(Math.round(distort * 100));
     meshRef.current.material.distort = distort;
     meshRef.current.material.speed = morphSpeed + t * morphEasing;
-    
+    meshRef.current.material.emissiveIntensity = hovered ? 0.7 : 0.4;
+
+    // Hover scale effect
+    const targetScale = hovered ? 2.2 : 2;
+    meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+
     meshRef.current.rotation.x = time * 0.2;
     meshRef.current.rotation.y = time * 0.3;
   });
 
   return (
     <Float speed={1.5} rotationIntensity={0.2}>
-      <mesh ref={meshRef} scale={2}>
+      <mesh
+        ref={meshRef}
+        scale={2}
+        onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+      >
         <icosahedronGeometry args={[1, 8]} />
         <MeshDistortMaterial
           color="#10b981"
@@ -1271,6 +1590,16 @@ const BlobMorph = React.memo(() => {
           speed={2}
         />
       </mesh>
+
+      {hovered && (
+        <Tooltip3D
+          position={[0, 3, 0]}
+          visible={true}
+          title="Organic Blob"
+          description={`Distortion: ${distortLevel}% - Scroll to increase morphing`}
+          variant="info"
+        />
+      )}
     </Float>
   );
 });
@@ -1507,104 +1836,151 @@ const WaveUVDistortion = React.memo(() => {
 });
 
 // ============================================================
-// ORBIT CONTROLS EFFECTS
+// ORBIT CONTROLS EFFECTS - With ACTUAL mouse orbit controls
 // ============================================================
 
-// Example 1: Zoom Orbit - Mouse orbit with scroll zoom
+// Example 1: Interactive Zoom Orbit - Mouse drag to orbit, wheel to zoom
 const ZoomOrbit = React.memo(() => {
   const groupRef = useRef();
-  const cameraRef = useRef();
-  const scroll = useScroll();
   const controls = useControls();
-  
-  const zoomRange = controls.zoomRange || 15;
-  const autoRotate = controls.autoRotate || 0.5;
+  const [hovered, setHovered] = useState(false);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+
+  const autoRotateSpeed = controls.autoRotate || 0.5;
 
   useFrame((state) => {
     if (!groupRef.current) return;
-    
-    // Auto rotation
-    groupRef.current.rotation.y += autoRotate * 0.01;
-    
-    // Scroll controls zoom (scale as proxy for zoom)
-    const zoom = 1 + scroll.offset * (zoomRange / 10);
-    groupRef.current.scale.setScalar(zoom);
+    // Subtle auto-rotation when not interacting
+    groupRef.current.rotation.y += autoRotateSpeed * 0.005;
   });
 
   return (
-    <group ref={groupRef}>
-      <mesh>
-        <torusKnotGeometry args={[1, 0.3, 128, 32]} />
-        <meshStandardMaterial color="#a855f7" emissive="#7c3aed" emissiveIntensity={0.4} metalness={0.8} roughness={0.2} />
-      </mesh>
-      <mesh scale={1.5}>
-        <torusKnotGeometry args={[1, 0.3, 64, 16]} />
-        <meshStandardMaterial color="#22d3ee" wireframe transparent opacity={0.3} />
-      </mesh>
-      <pointLight intensity={2} color="#a855f7" distance={10} />
-    </group>
+    <>
+      <InteractiveGroup
+        ref={groupRef}
+        onHover={() => { setHovered(true); setTooltipVisible(true); }}
+        onUnhover={() => { setHovered(false); setTooltipVisible(false); }}
+      >
+        <InteractiveMesh
+          hoverScale={1.05}
+          hoverEmissiveIntensity={0.7}
+          tooltip="Main torus knot"
+        >
+          <torusKnotGeometry args={[1, 0.3, 128, 32]} />
+          <meshStandardMaterial color="#a855f7" emissive="#7c3aed" emissiveIntensity={0.4} metalness={0.8} roughness={0.2} />
+        </InteractiveMesh>
+        <mesh scale={1.5}>
+          <torusKnotGeometry args={[1, 0.3, 64, 16]} />
+          <meshStandardMaterial color="#22d3ee" wireframe transparent opacity={0.3} />
+        </mesh>
+        <pointLight intensity={2} color="#a855f7" distance={10} />
+      </InteractiveGroup>
+
+      <Tooltip3D
+        position={[0, 2.5, 0]}
+        visible={tooltipVisible}
+        title="Torus Knot"
+        description="Drag to orbit, scroll to zoom"
+        hint="Click objects to select"
+      />
+
+      {!hovered && (
+        <InteractionHint
+          position={[0, -2, 0]}
+          visible={true}
+          action="drag"
+          customText="Drag to orbit camera"
+        />
+      )}
+    </>
   );
 });
 
-// Example 2: Speed Orbit - Rotation speed based on scroll velocity
+// Example 2: Interactive Speed Orbit - Click objects for selection
 const SpeedOrbit = React.memo(() => {
   const groupRef = useRef();
-  const scroll = useScroll();
-  const velocityRef = useRef(0);
-  const rotationRef = useRef(0);
   const controls = useControls();
-  
+  const [selectedIndex, setSelectedIndex] = useState(null);
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+
   const orbitSpeed = controls.orbitSpeed || 0.5;
 
-  // Performance: Memoize geometry args and orbiting objects
-  const octahedronGeometryArgs = useMemo(() => [0.8], []);
-  const sphereGeometryArgs = useMemo(() => [1, 32, 32], []);
-  const orbitingObjects = useMemo(() => 
+  const orbitingObjects = useMemo(() =>
     [...Array(6)].map((_, i) => ({
+      id: `orbit-obj-${i}`,
       position: [Math.cos(i * Math.PI / 3) * 3, 0, Math.sin(i * Math.PI / 3) * 3],
       color: `hsl(${i * 60 + 180}, 70%, 55%)`,
-      emissive: `hsl(${i * 60 + 180}, 70%, 35%)`
+      emissive: `hsl(${i * 60 + 180}, 70%, 35%)`,
+      name: ['Cyan', 'Blue', 'Purple', 'Pink', 'Orange', 'Green'][i]
     })), []);
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
-    
-    // Track velocity
-    const targetVel = Math.abs(scroll.delta) * 50;
-    velocityRef.current = THREE.MathUtils.lerp(velocityRef.current, targetVel, 0.1);
-    
-    // Base rotation + velocity boost
-    const speed = orbitSpeed + velocityRef.current * 0.5;
-    rotationRef.current += speed * delta;
-    
-    groupRef.current.rotation.y = rotationRef.current;
+    groupRef.current.rotation.y += orbitSpeed * delta * 0.5;
     groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.2;
   });
 
   return (
     <group ref={groupRef}>
       {orbitingObjects.map((obj, i) => (
-        <mesh key={i} position={obj.position}>
-          <octahedronGeometry args={octahedronGeometryArgs} />
-          <meshStandardMaterial 
-            color={obj.color} 
-            emissive={obj.emissive}
-            emissiveIntensity={0.4}
+        <React.Fragment key={i}>
+          <InteractiveMesh
+            position={obj.position}
+            hoverScale={1.15}
+            hoverEmissiveIntensity={0.8}
+            selected={selectedIndex === i}
+            objectId={obj.id}
+            onHover={() => setHoveredIndex(i)}
+            onUnhover={() => setHoveredIndex(null)}
+            onClick={() => setSelectedIndex(selectedIndex === i ? null : i)}
+          >
+            <octahedronGeometry args={[0.8]} />
+            <meshStandardMaterial
+              color={obj.color}
+              emissive={obj.emissive}
+              emissiveIntensity={selectedIndex === i ? 0.8 : 0.4}
+            />
+          </InteractiveMesh>
+
+          <FloatingLabel
+            position={obj.position}
+            visible={hoveredIndex === i || selectedIndex === i}
+            text={obj.name}
+            variant={selectedIndex === i ? 'selected' : 'highlight'}
+            offset={[0, 1.2, 0]}
           />
-        </mesh>
+        </React.Fragment>
       ))}
-      <mesh>
-        <sphereGeometry args={sphereGeometryArgs} />
+
+      <InteractiveMesh
+        hoverScale={1.08}
+        tooltip="Central sphere"
+        onClick={() => setSelectedIndex(null)}
+      >
+        <sphereGeometry args={[1, 32, 32]} />
         <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.5} />
-      </mesh>
+      </InteractiveMesh>
+
       <pointLight intensity={3} color="#ffffff" distance={10} />
+
+      {selectedIndex !== null && (
+        <Tooltip3D
+          position={orbitingObjects[selectedIndex].position}
+          visible={true}
+          title={`Selected: ${orbitingObjects[selectedIndex].name}`}
+          description="Click again or center to deselect"
+          offset={[0, 2, 0]}
+        />
+      )}
     </group>
   );
 });
 
 // ============================================================
-// SCENE WRAPPER
+// SCENE WRAPPERS
 // ============================================================
+
+// Standard scroll-based scene
 const AnimationScene = ({ children, pages = 3 }) => (
   <>
     <ambientLight intensity={0.3} />
@@ -1617,6 +1993,55 @@ const AnimationScene = ({ children, pages = 3 }) => (
     </ScrollControls>
   </>
 );
+
+// Interactive orbit-based scene with mouse controls
+const OrbitAnimationScene = ({ children, autoRotate = false, autoRotateSpeed = 0.5 }) => {
+  const [isOrbiting, setIsOrbiting] = useState(false);
+
+  return (
+    <>
+      <ambientLight intensity={0.4} />
+      <pointLight position={[-10, 10, 10]} intensity={2} color="#22d3ee" />
+      <pointLight position={[10, -10, -10]} intensity={2} color="#ec4899" />
+      <Stars radius={100} depth={50} count={2000} factor={4} fade speed={0.5} />
+      <fog attach="fog" args={['#050505', 15, 100]} />
+
+      {/* OrbitControls for mouse-based camera control */}
+      <OrbitControls
+        enablePan={false}
+        enableZoom={true}
+        enableRotate={true}
+        minDistance={5}
+        maxDistance={25}
+        autoRotate={autoRotate}
+        autoRotateSpeed={autoRotateSpeed}
+        zoomSpeed={0.5}
+        rotateSpeed={0.5}
+        enableDamping={true}
+        dampingFactor={0.05}
+        onStart={() => {
+          setIsOrbiting(true);
+          document.body.style.cursor = 'grabbing';
+        }}
+        onEnd={() => {
+          setIsOrbiting(false);
+          document.body.style.cursor = 'default';
+        }}
+        makeDefault
+      />
+
+      {/* Orbit mode indicator (rendered via Html) */}
+      <Html position={[0, 4, 0]} center distanceFactor={20} style={{ pointerEvents: 'none' }}>
+        <div className="orbit-mode-indicator">
+          <span className="orbit-mode-indicator-icon">↻</span>
+          <span>{isOrbiting ? 'Orbiting...' : 'Drag to orbit'}</span>
+        </div>
+      </Html>
+
+      {children}
+    </>
+  );
+};
 
 // ============================================================
 // ANIMATIONS MAP
@@ -1684,49 +2109,50 @@ const CodeBlock = ({ code }) => (
 const RightPanel = ({ isOpen, onToggle, activeTab, setActiveTab, category, example, controls, setControls }) => {
   const snippets = CODE_SNIPPETS[category]?.[example] || CODE_SNIPPETS[category]?.[0];
   const controlsConfig = CONTROLS_CONFIG[category] || [];
+  const [useDragControls, setUseDragControls] = useState(false);
 
   // Performance: Memoize event handlers to prevent unnecessary re-renders
-  // Note: setState functions from useState are stable and don't need to be in dependency arrays
+  // setState functions are stable by React's guarantee
   const handleControlChange = useCallback((key, value) => {
     setControls(prev => ({ ...prev, [key]: parseFloat(value) }));
-  }, []);
+  }, [setControls]);
 
   const handleResetControls = useCallback(() => {
     setControls({});
-  }, []);
+  }, [setControls]);
 
   const handleCodeTab = useCallback(() => {
     setActiveTab('code');
-  }, []);
+  }, [setActiveTab]);
 
   const handleTweakTab = useCallback(() => {
     setActiveTab('tweak');
-  }, []);
+  }, [setActiveTab]);
 
   return (
     <>
       {/* Toggle Button */}
-      <button 
-        className={`panel-toggle ${isOpen ? 'open' : ''}`} 
+      <button
+        className={`panel-toggle ${isOpen ? 'open' : ''}`}
         onClick={onToggle}
         data-testid="panel-toggle"
         title={isOpen ? 'Close panel' : 'Open panel'}
       >
         {isOpen ? '→' : '←'}
       </button>
-      
+
       {/* Panel */}
       <aside className={`right-panel ${isOpen ? 'open' : ''}`} data-testid="right-panel">
         {/* Tabs */}
         <div className="panel-tabs">
-          <button 
+          <button
             className={`panel-tab ${activeTab === 'code' ? 'active' : ''}`}
             onClick={handleCodeTab}
             data-testid="tab-code"
           >
             Code
           </button>
-          <button 
+          <button
             className={`panel-tab ${activeTab === 'tweak' ? 'active' : ''}`}
             onClick={handleTweakTab}
             data-testid="tab-tweak"
@@ -1734,7 +2160,7 @@ const RightPanel = ({ isOpen, onToggle, activeTab, setActiveTab, category, examp
             Tweak
           </button>
         </div>
-        
+
         {/* Content */}
         <div className="panel-content">
           {activeTab === 'code' && snippets && (
@@ -1744,16 +2170,38 @@ const RightPanel = ({ isOpen, onToggle, activeTab, setActiveTab, category, examp
               <p className="snippet-explanation">{snippets.explanation}</p>
             </div>
           )}
-          
+
           {activeTab === 'tweak' && (
             <div className="tweak-section">
-              <p className="tweak-intro">Adjust parameters to see how they affect the animation.</p>
-              
+              <div className="tweak-header">
+                <p className="tweak-intro">Adjust parameters to see how they affect the animation.</p>
+                <label className="drag-toggle">
+                  <input
+                    type="checkbox"
+                    checked={useDragControls}
+                    onChange={(e) => setUseDragControls(e.target.checked)}
+                  />
+                  <span className="drag-toggle-label">Drag values</span>
+                </label>
+              </div>
+
               {controlsConfig.map(ctrl => (
                 <div key={ctrl.key} className="control-item">
                   <div className="control-header">
                     <label className="control-label">{ctrl.label}</label>
-                    <span className="control-value">{controls[ctrl.key] ?? ctrl.default}</span>
+                    {useDragControls ? (
+                      <DraggableValue
+                        value={controls[ctrl.key] ?? ctrl.default}
+                        min={ctrl.min}
+                        max={ctrl.max}
+                        step={ctrl.step}
+                        sensitivity={0.5}
+                        onUpdate={(val) => handleControlChange(ctrl.key, val)}
+                        format={(v) => typeof v === 'number' ? v.toFixed(ctrl.step < 1 ? 1 : 0) : v}
+                      />
+                    ) : (
+                      <span className="control-value">{controls[ctrl.key] ?? ctrl.default}</span>
+                    )}
                   </div>
                   <input
                     type="range"
@@ -1771,8 +2219,8 @@ const RightPanel = ({ isOpen, onToggle, activeTab, setActiveTab, category, examp
                   </div>
                 </div>
               ))}
-              
-              <button 
+
+              <button
                 className="reset-btn"
                 onClick={handleResetControls}
                 data-testid="reset-controls"
@@ -1865,8 +2313,9 @@ export default function App() {
   const currentInfo = currentAnimations[activeExample];
 
   return (
-    <ControlsContext.Provider value={controls}>
-      <div className="app-root" data-testid="app-container">
+    <SelectionProvider>
+      <ControlsContext.Provider value={controls}>
+        <div className="app-root" data-testid="app-container">
         {isLoading && (
           <div className="loader-overlay">
             <div className="loader-spinner"></div>
@@ -1915,7 +2364,11 @@ export default function App() {
             ))}
           </div>
           
-          <div className="canvas-container">
+          <div
+            className="canvas-container"
+            data-hovering={false}
+            data-can-orbit={activeCategory === 'orbit'}
+          >
             {/* Reduced motion notice for accessibility */}
             {prefersReducedMotion && (
               <div className="reduced-motion-notice" data-testid="reduced-motion-notice">
@@ -1935,19 +2388,34 @@ export default function App() {
               >
                 <color attach="background" args={['#050505']} />
                 <Suspense fallback={null}>
-                  <AnimationScene pages={3}>
-                    <CurrentComponent />
-                  </AnimationScene>
+                  {/* Use OrbitAnimationScene for orbit category, AnimationScene for others */}
+                  {activeCategory === 'orbit' ? (
+                    <OrbitAnimationScene autoRotate={false}>
+                      <CurrentComponent />
+                    </OrbitAnimationScene>
+                  ) : (
+                    <AnimationScene pages={3}>
+                      <CurrentComponent />
+                    </AnimationScene>
+                  )}
                 </Suspense>
               </Canvas>
             </ThreeErrorBoundary>
           </div>
-          
+
           <div className="info-panel" data-testid="info-panel">
             <h2 className="info-title">{currentInfo.name}</h2>
             <p className="info-desc">{currentInfo.description}</p>
             <div className="scroll-hint">
-              <span>↕</span> Scroll to interact
+              {activeCategory === 'orbit' ? (
+                <>
+                  <span>🖱️</span> Drag to orbit, scroll to zoom
+                </>
+              ) : (
+                <>
+                  <span>↕</span> Scroll to interact
+                </>
+              )}
             </div>
           </div>
         </main>
@@ -1993,7 +2461,8 @@ export default function App() {
             </div>
           </div>
         )}
-      </div>
-    </ControlsContext.Provider>
+        </div>
+      </ControlsContext.Provider>
+    </SelectionProvider>
   );
 }

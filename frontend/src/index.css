@@ -393,6 +393,36 @@ body {
   gap: 1.25rem;
 }
 
+.tweak-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.drag-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.drag-toggle input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--cyan);
+  cursor: pointer;
+}
+
+.drag-toggle-label {
+  transition: color 0.2s ease;
+}
+
+.drag-toggle:hover .drag-toggle-label {
+  color: var(--text);
+}
+
 .tweak-intro {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -890,4 +920,519 @@ input:focus-visible {
 
 .skip-link:focus {
   top: 0;
+}
+
+/* ============================================
+   3D TOOLTIPS
+   ============================================ */
+.tooltip-3d {
+  background: rgba(13, 13, 13, 0.95);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  backdrop-filter: blur(12px);
+  white-space: nowrap;
+  animation: tooltipFadeIn 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  max-width: 250px;
+}
+
+.tooltip-3d--info {
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.tooltip-3d--action {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.tooltip-3d--warning {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.tooltip-3d-arrow {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(34, 211, 238, 0.3);
+}
+
+.tooltip-3d-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltip-3d-title {
+  color: var(--cyan);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.tooltip-3d-desc {
+  color: #a1a1aa;
+  font-size: 11px;
+  margin: 0;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.tooltip-3d-hint {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   FLOATING LABELS
+   ============================================ */
+.floating-label {
+  background: rgba(13, 13, 13, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+
+.floating-label--highlight {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.floating-label--selected {
+  background: rgba(34, 211, 238, 0.15);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+/* ============================================
+   INTERACTION HINTS
+   ============================================ */
+.interaction-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--purple);
+  backdrop-filter: blur(8px);
+  animation: hintPulse 2s ease-in-out infinite;
+}
+
+.interaction-hint-icon {
+  font-size: 14px;
+}
+
+.interaction-hint-text {
+  font-weight: 500;
+}
+
+@keyframes hintPulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+/* ============================================
+   DRAGGABLE VALUES
+   ============================================ */
+.draggable-value {
+  cursor: ns-resize;
+  user-select: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: background 0.2s ease;
+}
+
+.draggable-value:hover {
+  background: rgba(34, 211, 238, 0.2);
+}
+
+.draggable-value.dragging {
+  background: rgba(34, 211, 238, 0.3);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.3);
+}
+
+/* ============================================
+   INTERACTIVE CURSOR STATES
+   ============================================ */
+.canvas-container[data-hovering="true"] {
+  cursor: pointer;
+}
+
+.canvas-container[data-dragging="true"] {
+  cursor: grabbing !important;
+}
+
+.canvas-container[data-orbiting="true"] {
+  cursor: grabbing !important;
+}
+
+.canvas-container[data-can-orbit="true"]:not([data-orbiting="true"]) {
+  cursor: grab;
+}
+
+/* ============================================
+   SELECTION INDICATOR
+   ============================================ */
+.selection-indicator {
+  position: absolute;
+  bottom: 1.5rem;
+  right: calc(var(--panel-width) + 1.5rem);
+  background: rgba(13, 13, 13, 0.9);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideInRight 0.3s ease;
+  z-index: 50;
+}
+
+.selection-indicator.hidden {
+  display: none;
+}
+
+.selection-indicator-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--cyan);
+  border-radius: 50%;
+  animation: selectionPulse 1.5s ease-in-out infinite;
+}
+
+.selection-indicator-text {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.selection-indicator-clear {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.selection-indicator-clear:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes selectionPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+/* ============================================
+   ORBIT MODE INDICATOR
+   ============================================ */
+.orbit-mode-indicator {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(13, 13, 13, 0.9);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--purple);
+  backdrop-filter: blur(8px);
+  z-index: 50;
+}
+
+.orbit-mode-indicator-icon {
+  animation: orbitSpin 3s linear infinite;
+}
+
+@keyframes orbitSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   HOVER PREVIEW CARD
+   ============================================ */
+.hover-preview {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.hover-preview-canvas {
+  width: 200px;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.hover-preview-label {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* ============================================
+   INTERACTIVE CODE PREVIEW
+   ============================================ */
+.interactive-code {
+  background: var(--bg-code);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.code-line {
+  display: flex;
+  padding: 2px 12px;
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+
+.code-line:hover {
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.code-line.highlighted {
+  background: rgba(34, 211, 238, 0.15);
+  border-left: 2px solid var(--cyan);
+}
+
+.code-line.hovered {
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.code-line .line-number {
+  width: 32px;
+  text-align: right;
+  color: var(--text-dim);
+  margin-right: 16px;
+  user-select: none;
+}
+
+.code-line code {
+  flex: 1;
+  color: #e2e8f0;
+}
+
+/* ============================================
+   3D SELECTION INDICATOR RING
+   ============================================ */
+.selection-indicator-ring-container {
+  width: var(--indicator-size, 80px);
+  height: var(--indicator-size, 80px);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.selection-indicator-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--indicator-color, var(--cyan));
+  border-radius: 50%;
+  animation: selectionRingPulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+}
+
+.selection-indicator-ring--delayed {
+  animation-delay: 0.75s;
+  opacity: 0.5;
+}
+
+.selection-indicator-dot {
+  width: 12px;
+  height: 12px;
+  background: var(--indicator-color, var(--cyan));
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--indicator-color, var(--cyan));
+}
+
+@keyframes selectionRingPulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* ============================================
+   SELECTION PANEL
+   ============================================ */
+.selection-panel {
+  position: fixed;
+  bottom: 1.5rem;
+  left: calc(var(--sidebar-width) + 1.5rem);
+  background: rgba(13, 13, 13, 0.95);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(16px);
+  min-width: 220px;
+  animation: slideInUp 0.3s ease;
+  z-index: 100;
+}
+
+.selection-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.selection-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cyan);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selection-panel-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--cyan);
+  border-radius: 50%;
+  animation: selectionPulse 1.5s ease-in-out infinite;
+}
+
+.selection-panel-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.selection-panel-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.selection-panel-properties {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.selection-panel-property {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.selection-panel-property-label {
+  color: var(--text-muted);
+}
+
+.selection-panel-property-value {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.selection-panel-action {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(168, 85, 247, 0.2));
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 6px;
+  padding: 10px 16px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.selection-panel-action:hover {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.3), rgba(168, 85, 247, 0.3));
+  border-color: var(--cyan);
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
