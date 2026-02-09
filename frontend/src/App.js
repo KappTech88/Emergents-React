@@ -1980,7 +1980,22 @@ const SpeedOrbit = React.memo(() => {
 // SCENE WRAPPERS
 // ============================================================
 
-// Standard scroll-based scene
+// Wrapper that positions content at the bottom initially, scrolling up into view
+const ScrollOffsetGroup = ({ children, startOffset = -8 }) => {
+  const groupRef = useRef();
+  const scroll = useScroll();
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    // Start at bottom (negative Y), move to center (0) as scroll progresses
+    const yOffset = THREE.MathUtils.lerp(startOffset, 0, Math.min(scroll.offset * 2, 1));
+    groupRef.current.position.y = yOffset;
+  });
+
+  return <group ref={groupRef}>{children}</group>;
+};
+
+// Standard scroll-based scene with bottom-start positioning
 const AnimationScene = ({ children, pages = 3 }) => (
   <>
     <ambientLight intensity={0.3} />
@@ -1989,7 +2004,11 @@ const AnimationScene = ({ children, pages = 3 }) => (
     <Stars radius={100} depth={50} count={2000} factor={4} fade speed={0.5} />
     <fog attach="fog" args={['#050505', 10, 80]} />
     <ScrollControls pages={pages} damping={0.12}>
-      <Scroll>{children}</Scroll>
+      <Scroll>
+        <ScrollOffsetGroup startOffset={-10}>
+          {children}
+        </ScrollOffsetGroup>
+      </Scroll>
     </ScrollControls>
   </>
 );
@@ -2413,7 +2432,7 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <span>↕</span> Scroll to interact
+                  <span>↕</span> Scroll to see full animation
                 </>
               )}
             </div>
