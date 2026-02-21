@@ -154,6 +154,37 @@ body {
   color: var(--text-dim);
 }
 
+.sidebar-section-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.6rem 0.85rem 0.25rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-section-label:first-child {
+  margin-top: 0;
+  border-top: none;
+}
+
+/* ============================================
+   DOM SCENE CONTAINER
+   ============================================ */
+.dom-scene {
+  width: 100%;
+  height: 100%;
+  background: #050505;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 2rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 /* ============================================
    MAIN CONTENT
    ============================================ */
