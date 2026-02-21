@@ -1,6 +1,7 @@
 import React, { Suspense, useRef, useMemo, useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { ScrollControls, Scroll, useScroll, Stars, MeshDistortMaterial, Float, MeshWobbleMaterial } from '@react-three/drei';
+import { motion } from 'framer-motion';
 import * as THREE from 'three';
 
 // ============================================================
@@ -13,18 +14,30 @@ const useControls = () => useContext(ControlsContext);
 // ANIMATION CATEGORIES DATA
 // ============================================================
 const CATEGORIES = [
-  { id: 'tunnel', name: 'Tunnel Effects', icon: '◎', description: 'Z-Axis depth perception' },
-  { id: 'velocity', name: 'Velocity Deformation', icon: '◉', description: 'Speed-reactive morphing' },
-  { id: 'shader', name: 'Shader Effects', icon: '◈', description: 'Custom WebGL shaders' },
-  { id: 'exploded', name: 'Exploded Views', icon: '❖', description: 'Component separation' },
-  { id: 'rotation', name: 'Rotation Mapping', icon: '◐', description: 'Scroll-to-rotation' },
-  { id: 'parallax', name: 'Parallax Layers', icon: '☰', description: 'Depth layer movement' },
-  { id: 'dof', name: 'Depth of Field', icon: '◯', description: 'Focus & blur effects' },
-  { id: 'camerapath', name: 'Camera Path', icon: '↝', description: 'Camera follows spline' },
-  { id: 'morph', name: 'Morph Targets', icon: '⬡', description: 'Shape transformation' },
-  { id: 'reveal', name: 'Reveal Effects', icon: '◧', description: 'Content reveal/mask' },
-  { id: 'uvscroll', name: 'Texture Scroll', icon: '≋', description: 'UV coordinate animation' },
-  { id: 'orbit', name: 'Orbit Controls', icon: '↻', description: 'Interactive + scroll' },
+  // Scroll Effects
+  { id: 'tunnel', name: 'Tunnel Effects', icon: '◎', description: 'Z-Axis depth perception', type: 'scroll', renderer: 'canvas' },
+  { id: 'velocity', name: 'Velocity Deformation', icon: '◉', description: 'Speed-reactive morphing', type: 'scroll', renderer: 'canvas' },
+  { id: 'shader', name: 'Shader Effects', icon: '◈', description: 'Custom WebGL shaders', type: 'scroll', renderer: 'canvas' },
+  { id: 'exploded', name: 'Exploded Views', icon: '❖', description: 'Component separation', type: 'scroll', renderer: 'canvas' },
+  { id: 'rotation', name: 'Rotation Mapping', icon: '◐', description: 'Scroll-to-rotation', type: 'scroll', renderer: 'canvas' },
+  { id: 'parallax', name: 'Parallax Layers', icon: '☰', description: 'Depth layer movement', type: 'scroll', renderer: 'canvas' },
+  { id: 'dof', name: 'Depth of Field', icon: '◯', description: 'Focus & blur effects', type: 'scroll', renderer: 'canvas' },
+  { id: 'camerapath', name: 'Camera Path', icon: '↝', description: 'Camera follows spline', type: 'scroll', renderer: 'canvas' },
+  { id: 'morph', name: 'Morph Targets', icon: '⬡', description: 'Shape transformation', type: 'scroll', renderer: 'canvas' },
+  { id: 'reveal', name: 'Reveal Effects', icon: '◧', description: 'Content reveal/mask', type: 'scroll', renderer: 'canvas' },
+  { id: 'uvscroll', name: 'Texture Scroll', icon: '≋', description: 'UV coordinate animation', type: 'scroll', renderer: 'canvas' },
+  { id: 'orbit', name: 'Orbit Controls', icon: '↻', description: 'Interactive + scroll', type: 'scroll', renderer: 'canvas' },
+  // Mouseover Effects - 3D Canvas
+  { id: 'hovertransform', name: 'Hover Transform', icon: '⤡', description: 'Scale & rotate on hover', type: 'mouse', renderer: 'canvas' },
+  { id: 'mousefollow', name: 'Mouse Follow', icon: '⤳', description: 'Objects track cursor', type: 'mouse', renderer: 'canvas' },
+  { id: 'hoverglow', name: 'Hover Glow', icon: '✦', description: 'Emission on hover', type: 'mouse', renderer: 'canvas' },
+  { id: 'magnetic', name: 'Magnetic Cursor', icon: '⊛', description: 'Attract & repel objects', type: 'mouse', renderer: 'canvas' },
+  { id: 'ripple', name: 'Ripple Hover', icon: '◌', description: 'Surface waves from pointer', type: 'mouse', renderer: 'canvas' },
+  // Mouseover Effects - DOM
+  { id: 'cardhover', name: 'Card Hover', icon: '▣', description: '3D tilt, flip & lift effects', type: 'mouse', renderer: 'dom' },
+  { id: 'texthover', name: 'Text Hover', icon: 'Ʈ', description: 'Letter & word animations', type: 'mouse', renderer: 'dom' },
+  { id: 'buttonhover', name: 'Button Effects', icon: '⬚', description: 'Fill, slide & glow buttons', type: 'mouse', renderer: 'dom' },
+  { id: 'imagehover', name: 'Image Hover', icon: '▥', description: 'Zoom, reveal & overlay', type: 'mouse', renderer: 'dom' },
 ];
 
 // ============================================================
@@ -348,6 +361,302 @@ useFrame(() => {
 });`,
       explanation: 'Continuous rotation at base speed. Scroll velocity (delta) adds temporary boost. Creates responsive, dynamic orbit feel.'
     }
+  ],
+  hovertransform: [
+    {
+      title: 'Pointer Hover Scale',
+      code: `// Scale mesh on pointer hover
+const [hovered, setHovered] = useState(false);
+
+<mesh
+  onPointerOver={() => setHovered(true)}
+  onPointerOut={() => setHovered(false)}
+>
+
+useFrame(() => {
+  const target = hovered ? 1.4 : 1;
+  mesh.scale.lerp(new Vector3(target, target, target), 0.1);
+});`,
+      explanation: 'R3F meshes support onPointerOver/Out events. Use a hovered state flag and lerp the scale each frame for a smooth transition instead of an instant jump.'
+    },
+    {
+      title: 'Hover Spin with Deceleration',
+      code: `// Spin while hovered, decelerate on leave
+const spinSpeed = useRef(0);
+
+useFrame((state, delta) => {
+  const target = hovered ? 3 : 0;
+  spinSpeed.current = lerp(spinSpeed.current, target, 0.05);
+  mesh.rotation.y += spinSpeed.current * delta;
+});`,
+      explanation: 'Track spin speed in a ref. Lerp toward target speed (fast when hovered, zero when not). Multiply by delta for frame-rate independent rotation.'
+    }
+  ],
+  mousefollow: [
+    {
+      title: 'Follow Mouse Position in 3D',
+      code: `// Lerp mesh toward mouse position
+useFrame((state) => {
+  const { pointer } = state;
+  // pointer.x/y range from -1 to 1
+  const targetX = pointer.x * 5;
+  const targetY = pointer.y * 3;
+
+  mesh.position.x = lerp(mesh.position.x, targetX, 0.08);
+  mesh.position.y = lerp(mesh.position.y, targetY, 0.08);
+});`,
+      explanation: 'state.pointer gives normalized mouse coordinates (-1 to 1). Scale to world units and lerp each frame for smooth following with natural lag.'
+    },
+    {
+      title: 'Staggered Chain Follow',
+      code: `// Each sphere follows the one ahead
+useFrame((state) => {
+  // Leader follows mouse
+  positions[0].lerp(mouseTarget, 0.1);
+
+  // Each follower follows the previous
+  for (let i = 1; i < count; i++) {
+    positions[i].lerp(positions[i - 1], 0.08);
+  }
+});`,
+      explanation: 'Leader-follower pattern: first element tracks the mouse directly, each subsequent element follows the one before it. Lower lerp values create more lag.'
+    }
+  ],
+  hoverglow: [
+    {
+      title: 'Emissive Intensity on Hover',
+      code: `// Ramp emissive up on hover
+useFrame(() => {
+  const target = hovered ? 2.0 : 0.3;
+  const current = mesh.material.emissiveIntensity;
+  mesh.material.emissiveIntensity = lerp(current, target, 0.08);
+});`,
+      explanation: 'MeshStandardMaterial has emissive and emissiveIntensity properties. Lerping the intensity on hover creates a smooth glow-up effect without post-processing.'
+    },
+    {
+      title: 'Distance-Based Color Shift',
+      code: `// Color shifts based on distance from pointer
+useFrame((state) => {
+  objects.forEach((obj, i) => {
+    const dist = obj.position.distanceTo(mouseWorldPos);
+    const hue = (180 + dist * 30) / 360;
+    obj.material.color.setHSL(hue, 0.8, 0.55);
+  });
+});`,
+      explanation: 'Calculate distance from each object to the mouse world position. Map that distance to a hue value so objects near the cursor shift color.'
+    }
+  ],
+  magnetic: [
+    {
+      title: 'Attract Objects to Cursor',
+      code: `// Pull each object toward mouse
+useFrame((state) => {
+  const mouse3D = new Vector3(pointer.x * 5, pointer.y * 3, 0);
+
+  objects.forEach((obj) => {
+    const dir = mouse3D.clone().sub(obj.position);
+    const dist = dir.length();
+    const force = strength / (dist * dist + 0.5);
+
+    obj.position.add(dir.normalize().multiplyScalar(force));
+  });
+});`,
+      explanation: 'Inverse-square attraction: force = strength / distance^2. Objects close to cursor feel strong pull, distant objects barely move. Add small constant to avoid division by zero.'
+    },
+    {
+      title: 'Spring-Back to Rest Position',
+      code: `// Push away + spring back to origin
+useFrame(() => {
+  objects.forEach((obj, i) => {
+    // Repel from mouse
+    const away = obj.position.clone().sub(mousePos);
+    const dist = away.length();
+    if (dist < repelRadius) {
+      obj.position.add(away.normalize().multiplyScalar(0.1));
+    }
+
+    // Spring back to rest
+    obj.position.lerp(restPositions[i], 0.03);
+  });
+});`,
+      explanation: 'Two competing forces: repulsion pushes objects away from cursor within a radius, while a spring constantly pulls them back to their rest positions. The balance creates a lively magnetic field.'
+    }
+  ],
+  ripple: [
+    {
+      title: 'Vertex Displacement from Mouse UV',
+      code: `// In vertex shader
+uniform vec2 uMouse; // mouse UV from raycaster
+uniform float uStrength;
+
+void main() {
+  float dist = distance(uv, uMouse);
+  float wave = sin(dist * 30.0 - uTime * 5.0)
+             * exp(-dist * 5.0) * uStrength;
+  pos.z += wave;
+}`,
+      explanation: 'Raycaster gives UV coordinates where mouse hits the plane. Use distance from that UV to create concentric sine waves, with exponential falloff so the effect is strongest near the cursor.'
+    },
+    {
+      title: 'Concentric Ring Pulse',
+      code: `// Rings expand from mouse position
+useFrame((state) => {
+  rings.forEach((ring, i) => {
+    const age = time - ring.startTime;
+    const radius = age * expandSpeed;
+    const opacity = Math.max(0, 1 - age * fadeRate);
+
+    ring.mesh.scale.setScalar(radius);
+    ring.mesh.material.opacity = opacity;
+  });
+});`,
+      explanation: 'Each ring tracks when it was spawned. Over time it expands (scale) and fades (opacity). New rings spawn periodically at the current mouse position.'
+    }
+  ],
+  cardhover: [
+    {
+      title: '3D Tilt with Perspective',
+      code: `// Track mouse position relative to card
+const handleMouseMove = (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width - 0.5;
+  const y = (e.clientY - rect.top) / rect.height - 0.5;
+
+  setRotateX(-y * maxTilt);
+  setRotateY(x * maxTilt);
+};
+
+<motion.div style={{
+  transform: \`perspective(800px) rotateX(\${rotateX}deg) rotateY(\${rotateY}deg)\`
+}} />`,
+      explanation: 'Calculate mouse position relative to card center (normalized -0.5 to 0.5). Map to rotation angles. CSS perspective() creates the 3D depth effect.'
+    },
+    {
+      title: 'Card Flip on Hover',
+      code: `// Flip card with framer-motion
+<motion.div
+  whileHover={{ rotateY: 180 }}
+  transition={{ duration: 0.6 }}
+  style={{ transformStyle: 'preserve-3d' }}
+>
+  <div className="front" style={{ backfaceVisibility: 'hidden' }}>
+    Front
+  </div>
+  <div className="back" style={{
+    backfaceVisibility: 'hidden',
+    transform: 'rotateY(180deg)'
+  }}>
+    Back
+  </div>
+</motion.div>`,
+      explanation: 'framer-motion whileHover rotates 180deg. backface-visibility: hidden ensures only the facing side shows. preserve-3d keeps children in 3D space during rotation.'
+    }
+  ],
+  texthover: [
+    {
+      title: 'Staggered Letter Animation',
+      code: `// Animate each letter on hover
+{text.split('').map((char, i) => (
+  <motion.span
+    key={i}
+    whileHover={{ y: -10, color: '#22d3ee' }}
+    transition={{
+      type: 'spring', stiffness: 300,
+      delay: i * 0.03
+    }}
+  >
+    {char}
+  </motion.span>
+))}`,
+      explanation: 'Split text into individual characters wrapped in motion.span. Each has a whileHover animation with incremental delay based on index, creating a wave-like stagger.'
+    },
+    {
+      title: 'Glitch Effect on Hover',
+      code: `// CSS-based glitch with clip-path
+.glitch:hover {
+  animation: glitch 0.3s infinite;
+}
+
+@keyframes glitch {
+  0% { clip-path: inset(20% 0 30% 0); transform: translate(-2px); }
+  25% { clip-path: inset(60% 0 10% 0); transform: translate(2px); }
+  50% { clip-path: inset(10% 0 70% 0); transform: translate(-1px); }
+  100% { clip-path: inset(40% 0 20% 0); transform: translate(1px); }
+}`,
+      explanation: 'clip-path: inset() randomly reveals horizontal slices. Combined with small translate offsets, this creates a digital glitch distortion effect on hover.'
+    }
+  ],
+  buttonhover: [
+    {
+      title: 'Gradient Slide Button',
+      code: `// Sliding gradient on hover
+<motion.button
+  whileHover={{ backgroundPosition: '100% 0' }}
+  transition={{ duration: 0.5 }}
+  style={{
+    background: 'linear-gradient(90deg, #22d3ee 0%, #a855f7 50%, #22d3ee 100%)',
+    backgroundSize: '200% 100%',
+    backgroundPosition: '0% 0'
+  }}
+>
+  Hover Me
+</motion.button>`,
+      explanation: 'Background gradient is 200% wide so half is hidden. On hover, backgroundPosition shifts to reveal the other half, creating a smooth color slide effect.'
+    },
+    {
+      title: 'Morph Shape Button',
+      code: `// Button morphs shape on hover
+<motion.button
+  whileHover={{
+    borderRadius: '50px',
+    scale: 1.05,
+    boxShadow: '0 0 20px rgba(34,211,238,0.4)'
+  }}
+  transition={{ type: 'spring', stiffness: 200 }}
+>
+  Hover Me
+</motion.button>`,
+      explanation: 'framer-motion smoothly interpolates borderRadius from default to 50px (pill shape). Combined with scale and boxShadow changes for a complete morph effect.'
+    }
+  ],
+  imagehover: [
+    {
+      title: 'Zoom with Overlay',
+      code: `// Image zooms, overlay slides in
+<div className="image-container" style={{ overflow: 'hidden' }}>
+  <motion.img
+    whileHover={{ scale: 1.15 }}
+    transition={{ duration: 0.4 }}
+  />
+  <motion.div
+    className="overlay"
+    initial={{ opacity: 0, y: 20 }}
+    whileHover={{ opacity: 1, y: 0 }}
+  >
+    <h3>Title</h3>
+  </motion.div>
+</div>`,
+      explanation: 'Image scales up within an overflow:hidden container so it zooms without expanding the card. Overlay text fades in and slides up simultaneously.'
+    },
+    {
+      title: 'Shutter Reveal Effect',
+      code: `// Horizontal blinds reveal on hover
+{[...Array(5)].map((_, i) => (
+  <motion.div
+    key={i}
+    className="shutter-bar"
+    initial={{ scaleY: 1 }}
+    whileHover={{ scaleY: 0 }}
+    transition={{ delay: i * 0.05, duration: 0.3 }}
+    style={{
+      position: 'absolute',
+      top: \`\${i * 20}%\`, height: '20%',
+      background: '#050505'
+    }}
+  />
+))}`,
+      explanation: '5 horizontal bars cover the image. On hover each bar scales to 0 height with a staggered delay, creating a venetian blind reveal effect.'
+    }
   ]
 };
 
@@ -409,6 +718,46 @@ const CONTROLS_CONFIG = {
     { key: 'orbitSpeed', label: 'Orbit Speed', min: 0.1, max: 2, step: 0.1, default: 0.5 },
     { key: 'zoomRange', label: 'Zoom Range', min: 5, max: 25, step: 1, default: 15 },
     { key: 'autoRotate', label: 'Auto Rotate', min: 0, max: 1, step: 0.1, default: 0.5 },
+  ],
+  hovertransform: [
+    { key: 'hoverScale', label: 'Hover Scale', min: 1.1, max: 2.0, step: 0.1, default: 1.4 },
+    { key: 'lerpSpeed', label: 'Smoothness', min: 0.02, max: 0.2, step: 0.02, default: 0.1 },
+    { key: 'spinRate', label: 'Spin Speed', min: 1, max: 8, step: 0.5, default: 3 },
+  ],
+  mousefollow: [
+    { key: 'followSpeed', label: 'Follow Speed', min: 0.02, max: 0.2, step: 0.02, default: 0.08 },
+    { key: 'trailCount', label: 'Trail Count', min: 3, max: 12, step: 1, default: 8 },
+    { key: 'worldScale', label: 'Movement Range', min: 2, max: 8, step: 0.5, default: 5 },
+  ],
+  hoverglow: [
+    { key: 'glowIntensity', label: 'Glow Intensity', min: 0.5, max: 3.0, step: 0.1, default: 2.0 },
+    { key: 'fadeSpeed', label: 'Fade Speed', min: 0.02, max: 0.15, step: 0.01, default: 0.08 },
+  ],
+  magnetic: [
+    { key: 'attractStrength', label: 'Attract Force', min: 0.01, max: 0.15, step: 0.01, default: 0.06 },
+    { key: 'springBack', label: 'Spring Back', min: 0.01, max: 0.1, step: 0.01, default: 0.03 },
+    { key: 'repelRadius', label: 'Repel Radius', min: 1, max: 5, step: 0.5, default: 2.5 },
+  ],
+  ripple: [
+    { key: 'rippleStrength', label: 'Ripple Strength', min: 0.1, max: 1.0, step: 0.1, default: 0.4 },
+    { key: 'rippleFreq', label: 'Wave Frequency', min: 10, max: 50, step: 5, default: 30 },
+    { key: 'rippleDecay', label: 'Decay Rate', min: 1, max: 10, step: 0.5, default: 5 },
+  ],
+  cardhover: [
+    { key: 'maxTilt', label: 'Max Tilt (deg)', min: 5, max: 30, step: 1, default: 15 },
+    { key: 'flipDuration', label: 'Flip Speed', min: 0.2, max: 1.0, step: 0.1, default: 0.6 },
+  ],
+  texthover: [
+    { key: 'letterDelay', label: 'Letter Delay', min: 0.01, max: 0.08, step: 0.005, default: 0.03 },
+    { key: 'liftHeight', label: 'Lift Height', min: 5, max: 25, step: 1, default: 12 },
+  ],
+  buttonhover: [
+    { key: 'slideDuration', label: 'Slide Speed', min: 0.2, max: 1.0, step: 0.1, default: 0.5 },
+    { key: 'morphRadius', label: 'Morph Radius', min: 10, max: 50, step: 5, default: 50 },
+  ],
+  imagehover: [
+    { key: 'zoomScale', label: 'Zoom Amount', min: 1.05, max: 1.4, step: 0.05, default: 1.15 },
+    { key: 'shutterBars', label: 'Shutter Bars', min: 3, max: 8, step: 1, default: 5 },
   ]
 };
 
@@ -1507,7 +1856,6 @@ const WaveUVDistortion = React.memo(() => {
 // Example 1: Zoom Orbit - Mouse orbit with scroll zoom
 const ZoomOrbit = React.memo(() => {
   const groupRef = useRef();
-  const cameraRef = useRef();
   const scroll = useScroll();
   const controls = useControls();
   
@@ -1597,6 +1945,933 @@ const SpeedOrbit = React.memo(() => {
 });
 
 // ============================================================
+// HOVER TRANSFORM EFFECTS
+// ============================================================
+
+const ScalePop = React.memo(() => {
+  const groupRef = useRef();
+  const meshRefs = useRef([]);
+  const hoveredIndex = useRef(-1);
+  const controls = useControls();
+
+  const hoverScale = controls.hoverScale || 1.4;
+  const lerpSpeed = controls.lerpSpeed || 0.1;
+
+  const boxes = useMemo(() => {
+    const items = [];
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        items.push({
+          position: [(col - 1.5) * 1.8, (row - 1.5) * 1.8, 0],
+          color: `hsl(${(row * 4 + col) * 22 + 180}, 70%, 55%)`,
+          index: row * 4 + col,
+        });
+      }
+    }
+    return items;
+  }, []);
+
+  useFrame(() => {
+    meshRefs.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const isHovered = i === hoveredIndex.current;
+      const targetScale = isHovered ? hoverScale : 1;
+      mesh.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), lerpSpeed);
+
+      if (isHovered) {
+        mesh.material.emissiveIntensity = THREE.MathUtils.lerp(mesh.material.emissiveIntensity, 0.8, 0.1);
+      } else {
+        mesh.material.emissiveIntensity = THREE.MathUtils.lerp(mesh.material.emissiveIntensity, 0.2, 0.1);
+      }
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {boxes.map((box, i) => (
+        <mesh
+          key={i}
+          ref={el => meshRefs.current[i] = el}
+          position={box.position}
+          onPointerOver={() => { hoveredIndex.current = i; }}
+          onPointerOut={() => { if (hoveredIndex.current === i) hoveredIndex.current = -1; }}
+        >
+          <boxGeometry args={[1.2, 1.2, 1.2]} />
+          <meshStandardMaterial color={box.color} emissive={box.color} emissiveIntensity={0.2} metalness={0.7} roughness={0.3} />
+        </mesh>
+      ))}
+    </group>
+  );
+});
+
+const SpinHover = React.memo(() => {
+  const meshRefs = useRef([]);
+  const spinSpeeds = useRef([]);
+  const hoveredSet = useRef(new Set());
+  const controls = useControls();
+
+  const spinRate = controls.spinRate || 3;
+
+  const shapes = useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      items.push({
+        position: [Math.cos(angle) * 3, Math.sin(angle) * 3, 0],
+        color: `hsl(${i * 60 + 200}, 75%, 55%)`,
+      });
+      spinSpeeds.current[i] = 0;
+    }
+    return items;
+  }, []);
+
+  useFrame((state, delta) => {
+    meshRefs.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const target = hoveredSet.current.has(i) ? spinRate : 0;
+      spinSpeeds.current[i] = THREE.MathUtils.lerp(spinSpeeds.current[i], target, 0.05);
+      mesh.rotation.y += spinSpeeds.current[i] * delta;
+      mesh.rotation.x = Math.sin(state.clock.elapsedTime * 0.5 + i) * 0.2;
+    });
+  });
+
+  return (
+    <group>
+      {shapes.map((shape, i) => (
+        <mesh
+          key={i}
+          ref={el => meshRefs.current[i] = el}
+          position={shape.position}
+          onPointerOver={() => hoveredSet.current.add(i)}
+          onPointerOut={() => hoveredSet.current.delete(i)}
+        >
+          <torusKnotGeometry args={[0.6, 0.2, 64, 16]} />
+          <meshStandardMaterial color={shape.color} emissive={shape.color} emissiveIntensity={0.3} metalness={0.8} roughness={0.2} />
+        </mesh>
+      ))}
+      <pointLight intensity={2} color="#22d3ee" distance={10} />
+    </group>
+  );
+});
+
+// ============================================================
+// MOUSE FOLLOW EFFECTS
+// ============================================================
+
+const TrackingSphere = React.memo(() => {
+  const meshRef = useRef();
+  const controls = useControls();
+
+  const followSpeed = controls.followSpeed || 0.08;
+  const worldScale = controls.worldScale || 5;
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const targetX = state.pointer.x * worldScale;
+    const targetY = state.pointer.y * (worldScale * 0.6);
+
+    meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, targetX, followSpeed);
+    meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, targetY, followSpeed);
+
+    meshRef.current.rotation.x = state.clock.elapsedTime * 0.4;
+    meshRef.current.rotation.y = state.clock.elapsedTime * 0.6;
+  });
+
+  return (
+    <group>
+      <mesh ref={meshRef} scale={1.5}>
+        <icosahedronGeometry args={[1, 4]} />
+        <MeshDistortMaterial color="#22d3ee" emissive="#0891b2" emissiveIntensity={0.5} roughness={0.2} metalness={0.8} distort={0.3} speed={2} />
+      </mesh>
+      <pointLight intensity={2} color="#22d3ee" distance={12} />
+    </group>
+  );
+});
+
+const LazyFollow = React.memo(() => {
+  const meshRefs = useRef([]);
+  const positions = useRef([]);
+  const controls = useControls();
+
+  const followSpeed = controls.followSpeed || 0.08;
+  const trailCount = controls.trailCount || 8;
+  const worldScale = controls.worldScale || 5;
+
+  const spheres = useMemo(() => {
+    const items = [];
+    for (let i = 0; i < trailCount; i++) {
+      items.push({
+        scale: 0.4 - i * 0.03,
+        color: `hsl(${180 + i * 15}, 80%, ${60 - i * 3}%)`,
+      });
+      positions.current[i] = new THREE.Vector3(0, 0, 0);
+    }
+    return items;
+  }, [trailCount]);
+
+  useFrame((state) => {
+    // Leader follows mouse
+    const targetX = state.pointer.x * worldScale;
+    const targetY = state.pointer.y * (worldScale * 0.6);
+    positions.current[0].lerp(new THREE.Vector3(targetX, targetY, 0), followSpeed);
+
+    // Followers chase the one ahead
+    for (let i = 1; i < positions.current.length; i++) {
+      positions.current[i].lerp(positions.current[i - 1], followSpeed * 0.8);
+    }
+
+    // Update mesh positions
+    meshRefs.current.forEach((mesh, i) => {
+      if (!mesh || !positions.current[i]) return;
+      mesh.position.copy(positions.current[i]);
+      mesh.rotation.x = state.clock.elapsedTime * (0.5 + i * 0.1);
+      mesh.rotation.y = state.clock.elapsedTime * (0.3 + i * 0.1);
+    });
+  });
+
+  return (
+    <group>
+      {spheres.map((s, i) => (
+        <mesh key={i} ref={el => meshRefs.current[i] = el} scale={s.scale}>
+          <icosahedronGeometry args={[1, 2]} />
+          <meshStandardMaterial color={s.color} emissive={s.color} emissiveIntensity={0.4} metalness={0.7} roughness={0.3} />
+        </mesh>
+      ))}
+      <pointLight intensity={2} color="#22d3ee" distance={10} />
+    </group>
+  );
+});
+
+// ============================================================
+// HOVER GLOW EFFECTS
+// ============================================================
+
+const EmissionPulse = React.memo(() => {
+  const meshRef = useRef();
+  const hovered = useRef(false);
+  const controls = useControls();
+
+  const glowIntensity = controls.glowIntensity || 2.0;
+  const fadeSpeed = controls.fadeSpeed || 0.08;
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const target = hovered.current ? glowIntensity : 0.3;
+    meshRef.current.material.emissiveIntensity = THREE.MathUtils.lerp(
+      meshRef.current.material.emissiveIntensity, target, fadeSpeed
+    );
+
+    const colorTarget = hovered.current ? 1.0 : 0.5;
+    const t = THREE.MathUtils.lerp(meshRef.current.userData.colorT || 0.5, colorTarget, fadeSpeed);
+    meshRef.current.userData.colorT = t;
+    const hue = THREE.MathUtils.lerp(280, 190, t);
+    meshRef.current.material.emissive.setHSL(hue / 360, 0.8, 0.5);
+
+    meshRef.current.rotation.x = state.clock.elapsedTime * 0.3;
+    meshRef.current.rotation.y = state.clock.elapsedTime * 0.5;
+  });
+
+  return (
+    <group>
+      <Float speed={1.5} rotationIntensity={0.2}>
+        <mesh
+          ref={meshRef}
+          scale={2.5}
+          onPointerOver={() => { hovered.current = true; }}
+          onPointerOut={() => { hovered.current = false; }}
+        >
+          <icosahedronGeometry args={[1, 3]} />
+          <meshStandardMaterial color="#a855f7" emissive="#a855f7" emissiveIntensity={0.3} metalness={0.9} roughness={0.1} />
+        </mesh>
+      </Float>
+      <pointLight intensity={2} color="#a855f7" distance={15} />
+    </group>
+  );
+});
+
+const ColorShift = React.memo(() => {
+  const meshRefs = useRef([]);
+  const controls = useControls();
+
+  const fadeSpeed = controls.fadeSpeed || 0.08;
+
+  const spheres = useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      items.push({
+        position: [Math.cos(angle) * 3.5, Math.sin(angle) * 3.5, 0],
+        baseHue: 180 + i * 15,
+      });
+    }
+    return items;
+  }, []);
+
+  useFrame((state) => {
+    const mouseX = state.pointer.x * 5;
+    const mouseY = state.pointer.y * 3;
+    const mousePos = new THREE.Vector3(mouseX, mouseY, 0);
+
+    meshRefs.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const dist = mesh.position.distanceTo(mousePos);
+      const influence = Math.max(0, 1 - dist / 5);
+
+      const hue = THREE.MathUtils.lerp(spheres[i].baseHue, 60, influence);
+      mesh.material.color.setHSL(hue / 360, 0.8, 0.55);
+      mesh.material.emissive.setHSL(hue / 360, 0.8, 0.3);
+      mesh.material.emissiveIntensity = THREE.MathUtils.lerp(mesh.material.emissiveIntensity, 0.2 + influence * 1.5, fadeSpeed);
+
+      mesh.position.y = spheres[i].position[1] + Math.sin(state.clock.elapsedTime + i * 0.5) * 0.2;
+    });
+  });
+
+  return (
+    <group>
+      {spheres.map((s, i) => (
+        <mesh key={i} ref={el => meshRefs.current[i] = el} position={s.position}>
+          <sphereGeometry args={[0.5, 24, 24]} />
+          <meshStandardMaterial color={`hsl(${s.baseHue}, 80%, 55%)`} emissive={`hsl(${s.baseHue}, 80%, 30%)`} emissiveIntensity={0.2} metalness={0.6} roughness={0.3} />
+        </mesh>
+      ))}
+      <pointLight intensity={2} color="#22d3ee" distance={12} />
+    </group>
+  );
+});
+
+// ============================================================
+// MAGNETIC CURSOR EFFECTS
+// ============================================================
+
+const AttractGrid = React.memo(() => {
+  const meshRefs = useRef([]);
+  const controls = useControls();
+
+  const attractStrength = controls.attractStrength || 0.06;
+
+  const grid = useMemo(() => {
+    const items = [];
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        items.push({
+          rest: new THREE.Vector3((col - 3.5) * 0.9, (row - 3.5) * 0.9, 0),
+          color: `hsl(${(row * 8 + col) * 5 + 180}, 70%, 55%)`,
+        });
+      }
+    }
+    return items;
+  }, []);
+
+  useFrame((state) => {
+    const mouseX = state.pointer.x * 5;
+    const mouseY = state.pointer.y * 3;
+    const mousePos = new THREE.Vector3(mouseX, mouseY, 0);
+
+    meshRefs.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const rest = grid[i].rest;
+
+      // Attract toward mouse
+      const dir = mousePos.clone().sub(mesh.position);
+      const dist = dir.length();
+      const force = attractStrength / (dist * dist + 0.5);
+      mesh.position.add(dir.normalize().multiplyScalar(force));
+
+      // Spring back to rest
+      mesh.position.lerp(rest, 0.02);
+    });
+  });
+
+  return (
+    <group>
+      {grid.map((g, i) => (
+        <mesh key={i} ref={el => meshRefs.current[i] = el} position={g.rest.toArray()}>
+          <sphereGeometry args={[0.15, 12, 12]} />
+          <meshStandardMaterial color={g.color} emissive={g.color} emissiveIntensity={0.3} />
+        </mesh>
+      ))}
+      <pointLight intensity={2} color="#a855f7" distance={10} />
+    </group>
+  );
+});
+
+const RepelField = React.memo(() => {
+  const meshRefs = useRef([]);
+  const controls = useControls();
+
+  const springBack = controls.springBack || 0.03;
+  const repelRadius = controls.repelRadius || 2.5;
+
+  const objects = useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 30; i++) {
+      items.push({
+        rest: new THREE.Vector3(
+          (Math.random() - 0.5) * 8,
+          (Math.random() - 0.5) * 6,
+          (Math.random() - 0.5) * 2
+        ),
+        color: `hsl(${Math.random() * 60 + 270}, 70%, 55%)`,
+        scale: 0.15 + Math.random() * 0.2,
+      });
+    }
+    return items;
+  }, []);
+
+  useFrame((state) => {
+    const mouseX = state.pointer.x * 5;
+    const mouseY = state.pointer.y * 3;
+    const mousePos = new THREE.Vector3(mouseX, mouseY, 0);
+
+    meshRefs.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const away = mesh.position.clone().sub(mousePos);
+      const dist = away.length();
+
+      if (dist < repelRadius) {
+        const force = (repelRadius - dist) * 0.05;
+        mesh.position.add(away.normalize().multiplyScalar(force));
+      }
+
+      // Spring back
+      mesh.position.lerp(objects[i].rest, springBack);
+    });
+  });
+
+  return (
+    <group>
+      {objects.map((obj, i) => (
+        <mesh key={i} ref={el => meshRefs.current[i] = el} position={obj.rest.toArray()} scale={obj.scale}>
+          <dodecahedronGeometry args={[1]} />
+          <meshStandardMaterial color={obj.color} emissive={obj.color} emissiveIntensity={0.3} metalness={0.7} roughness={0.3} />
+        </mesh>
+      ))}
+      <pointLight intensity={2} color="#ec4899" distance={10} />
+    </group>
+  );
+});
+
+// ============================================================
+// RIPPLE HOVER EFFECTS
+// ============================================================
+
+const SurfaceRipple = React.memo(() => {
+  const matRef = useRef();
+  const mouseUV = useRef(new THREE.Vector2(0.5, 0.5));
+  const controls = useControls();
+
+  const rippleStrength = controls.rippleStrength || 0.4;
+  const rippleFreq = controls.rippleFreq || 30;
+  const rippleDecay = controls.rippleDecay || 5;
+
+  const shader = useMemo(() => ({
+    uniforms: {
+      uTime: { value: 0 },
+      uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+      uStrength: { value: rippleStrength },
+      uFreq: { value: rippleFreq },
+      uDecay: { value: rippleDecay },
+    },
+    vertexShader: `
+      uniform float uTime;
+      uniform vec2 uMouse;
+      uniform float uStrength;
+      uniform float uFreq;
+      uniform float uDecay;
+      varying vec2 vUv;
+      varying float vWave;
+      void main() {
+        vUv = uv;
+        vec3 pos = position;
+        float dist = distance(uv, uMouse);
+        float wave = sin(dist * uFreq - uTime * 5.0) * exp(-dist * uDecay) * uStrength;
+        pos.z += wave;
+        vWave = wave;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      varying vec2 vUv;
+      varying float vWave;
+      void main() {
+        vec3 cyan = vec3(0.133, 0.827, 0.933);
+        vec3 purple = vec3(0.659, 0.341, 0.969);
+        vec3 color = mix(cyan, purple, vUv.y + vWave * 0.5);
+        color += vWave * 0.3;
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `
+  }), [rippleStrength, rippleFreq, rippleDecay]);
+
+  useFrame((state) => {
+    if (!matRef.current) return;
+    matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    matRef.current.uniforms.uMouse.value.copy(mouseUV.current);
+  });
+
+  const handlePointerMove = useCallback((e) => {
+    if (e.uv) {
+      mouseUV.current.copy(e.uv);
+    }
+  }, []);
+
+  return (
+    <mesh rotation={[-0.4, 0, 0]} onPointerMove={handlePointerMove}>
+      <planeGeometry args={[10, 7, 100, 100]} />
+      <shaderMaterial ref={matRef} args={[shader]} side={THREE.DoubleSide} />
+    </mesh>
+  );
+});
+
+const WaveRing = React.memo(() => {
+  const ringsRef = useRef([]);
+  const controls = useControls();
+
+  const rings = useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 10; i++) {
+      items.push({
+        baseRadius: 0.5 + i * 0.4,
+        color: `hsl(${180 + i * 15}, 80%, 55%)`,
+        phase: i * 0.3,
+      });
+    }
+    return items;
+  }, []);
+
+  useFrame((state) => {
+    const mouseX = state.pointer.x * 3;
+    const mouseY = state.pointer.y * 2;
+    const time = state.clock.elapsedTime;
+
+    ringsRef.current.forEach((mesh, i) => {
+      if (!mesh) return;
+      const ring = rings[i];
+      const pulse = Math.sin(time * 3 - ring.phase * 2) * 0.15;
+      const scale = ring.baseRadius + pulse;
+
+      mesh.scale.set(scale, scale, 1);
+      mesh.position.x = mouseX * (0.1 * i);
+      mesh.position.y = mouseY * (0.1 * i);
+      mesh.material.opacity = 0.8 - i * 0.06;
+    });
+  });
+
+  return (
+    <group>
+      {rings.map((ring, i) => (
+        <mesh key={i} ref={el => ringsRef.current[i] = el} rotation={[0, 0, 0]}>
+          <torusGeometry args={[1, 0.03, 16, 80]} />
+          <meshBasicMaterial color={ring.color} transparent opacity={0.8} />
+        </mesh>
+      ))}
+      <pointLight intensity={2} color="#22d3ee" distance={10} />
+    </group>
+  );
+});
+
+// ============================================================
+// DOM-BASED MOUSEOVER COMPONENTS
+// ============================================================
+
+// Card Hover - TiltCard
+const TiltCard = React.memo(() => {
+  const [rotateX, setRotateX] = useState(0);
+  const [rotateY, setRotateY] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const controls = useControls();
+  const maxTilt = controls.maxTilt || 15;
+
+  const handleMouseMove = useCallback((e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setRotateX(-y * maxTilt);
+    setRotateY(x * maxTilt);
+  }, [maxTilt]);
+
+  const handleMouseLeave = useCallback(() => {
+    setRotateX(0);
+    setRotateY(0);
+    setIsHovered(false);
+  }, []);
+
+  return (
+    <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', alignItems: 'center', height: '100%', flexWrap: 'wrap' }}>
+      {[
+        { title: 'Aurora', subtitle: 'Northern Lights', gradient: 'linear-gradient(135deg, #0891b2, #a855f7)' },
+        { title: 'Nebula', subtitle: 'Deep Space', gradient: 'linear-gradient(135deg, #7c3aed, #ec4899)' },
+        { title: 'Prism', subtitle: 'Light Refraction', gradient: 'linear-gradient(135deg, #22d3ee, #10b981)' },
+      ].map((card, i) => (
+        <motion.div
+          key={i}
+          onMouseMove={handleMouseMove}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={handleMouseLeave}
+          animate={{ rotateX, rotateY }}
+          transition={{ type: 'spring', stiffness: 150, damping: 15 }}
+          style={{
+            width: 220,
+            height: 300,
+            borderRadius: 16,
+            background: card.gradient,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            padding: 24,
+            cursor: 'pointer',
+            transformStyle: 'preserve-3d',
+            boxShadow: isHovered ? '0 25px 50px rgba(0,0,0,0.5)' : '0 10px 30px rgba(0,0,0,0.3)',
+            border: '1px solid rgba(255,255,255,0.1)',
+          }}
+        >
+          <div style={{ transform: 'translateZ(30px)' }}>
+            <h3 style={{ color: '#fff', fontSize: 22, fontWeight: 700, margin: 0 }}>{card.title}</h3>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, margin: '4px 0 0' }}>{card.subtitle}</p>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+});
+
+// Card Hover - FlipCard
+const FlipCard = React.memo(() => {
+  const controls = useControls();
+  const flipDuration = controls.flipDuration || 0.6;
+
+  const cards = useMemo(() => [
+    { front: 'React', back: 'Component-based UI library', color: '#22d3ee', icon: '⚛' },
+    { front: 'Three.js', back: '3D graphics library for WebGL', color: '#a855f7', icon: '△' },
+    { front: 'Framer', back: 'Production-ready motion library', color: '#ec4899', icon: '◆' },
+  ], []);
+
+  return (
+    <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', alignItems: 'center', height: '100%', flexWrap: 'wrap' }}>
+      {cards.map((card, i) => (
+        <motion.div
+          key={i}
+          whileHover={{ rotateY: 180 }}
+          transition={{ duration: flipDuration }}
+          style={{
+            width: 200,
+            height: 260,
+            cursor: 'pointer',
+            transformStyle: 'preserve-3d',
+            perspective: 1000,
+          }}
+        >
+          {/* Front */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 16,
+            background: `linear-gradient(145deg, ${card.color}22, ${card.color}44)`,
+            border: `1px solid ${card.color}66`,
+            backfaceVisibility: 'hidden',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+          }}>
+            <span style={{ fontSize: 48 }}>{card.icon}</span>
+            <h3 style={{ color: '#fff', fontSize: 20, fontWeight: 600, margin: 0 }}>{card.front}</h3>
+          </div>
+          {/* Back */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 16,
+            background: `linear-gradient(145deg, ${card.color}44, ${card.color}22)`,
+            border: `1px solid ${card.color}66`,
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24, textAlign: 'center',
+          }}>
+            <p style={{ color: '#fff', fontSize: 15, lineHeight: 1.5 }}>{card.back}</p>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+});
+
+// Text Hover - LetterSpread
+const LetterSpread = React.memo(() => {
+  const controls = useControls();
+  const letterDelay = controls.letterDelay || 0.03;
+  const liftHeight = controls.liftHeight || 12;
+
+  const texts = useMemo(() => ['HOVER', 'THESE', 'WORDS'], []);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+      {texts.map((text, ti) => (
+        <motion.div
+          key={ti}
+          whileHover="hovered"
+          style={{ display: 'flex', cursor: 'pointer', gap: 2 }}
+        >
+          {text.split('').map((char, ci) => (
+            <motion.span
+              key={ci}
+              variants={{
+                hovered: { y: -liftHeight, color: '#22d3ee', transition: { delay: ci * letterDelay, type: 'spring', stiffness: 300 } },
+              }}
+              style={{ fontSize: 48, fontWeight: 800, color: '#ffffff', letterSpacing: 4, display: 'inline-block' }}
+            >
+              {char}
+            </motion.span>
+          ))}
+        </motion.div>
+      ))}
+    </div>
+  );
+});
+
+// Text Hover - GlitchText
+const GlitchText = React.memo(() => {
+  const [hoveredIndex, setHoveredIndex] = useState(-1);
+
+  const lines = useMemo(() => ['GLITCH', 'EFFECT', 'HOVER'], []);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+      {lines.map((text, i) => (
+        <div
+          key={i}
+          onMouseEnter={() => setHoveredIndex(i)}
+          onMouseLeave={() => setHoveredIndex(-1)}
+          style={{ position: 'relative', cursor: 'pointer' }}
+        >
+          <span style={{
+            fontSize: 52, fontWeight: 900, color: '#fff',
+            letterSpacing: 6, display: 'inline-block',
+            textShadow: hoveredIndex === i
+              ? '2px 0 #22d3ee, -2px 0 #ec4899, 0 2px #a855f7'
+              : 'none',
+            animation: hoveredIndex === i ? 'none' : 'none',
+          }}>
+            {hoveredIndex === i ? (
+              text.split('').map((char, ci) => (
+                <motion.span
+                  key={ci}
+                  animate={{
+                    x: [0, -2, 3, -1, 0],
+                    y: [0, 1, -2, 1, 0],
+                    opacity: [1, 0.8, 1, 0.7, 1],
+                  }}
+                  transition={{ duration: 0.3, repeat: Infinity, delay: ci * 0.02 }}
+                  style={{ display: 'inline-block' }}
+                >
+                  {char}
+                </motion.span>
+              ))
+            ) : text}
+          </span>
+          {hoveredIndex === i && (
+            <>
+              <span style={{
+                position: 'absolute', top: 2, left: 2, fontSize: 52, fontWeight: 900,
+                color: '#22d3ee', opacity: 0.5, letterSpacing: 6, clipPath: 'inset(20% 0 40% 0)',
+              }}>{text}</span>
+              <span style={{
+                position: 'absolute', top: -2, left: -2, fontSize: 52, fontWeight: 900,
+                color: '#ec4899', opacity: 0.5, letterSpacing: 6, clipPath: 'inset(60% 0 10% 0)',
+              }}>{text}</span>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+});
+
+// Button Effects - SlideButton
+const SlideButton = React.memo(() => {
+  const controls = useControls();
+  const slideDuration = controls.slideDuration || 0.5;
+
+  const buttons = useMemo(() => [
+    { label: 'Get Started', gradient: 'linear-gradient(90deg, #22d3ee 0%, #a855f7 50%, #22d3ee 100%)' },
+    { label: 'Learn More', gradient: 'linear-gradient(90deg, #a855f7 0%, #ec4899 50%, #a855f7 100%)' },
+    { label: 'Sign Up', gradient: 'linear-gradient(90deg, #ec4899 0%, #f59e0b 50%, #ec4899 100%)' },
+    { label: 'Download', gradient: 'linear-gradient(90deg, #10b981 0%, #22d3ee 50%, #10b981 100%)' },
+  ], []);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+      {buttons.map((btn, i) => (
+        <motion.button
+          key={i}
+          whileHover={{ backgroundPosition: '100% 0', scale: 1.05, boxShadow: '0 0 30px rgba(34,211,238,0.3)' }}
+          transition={{ duration: slideDuration }}
+          style={{
+            padding: '14px 48px',
+            fontSize: 16,
+            fontWeight: 600,
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.15)',
+            borderRadius: 8,
+            cursor: 'pointer',
+            background: btn.gradient,
+            backgroundSize: '200% 100%',
+            backgroundPosition: '0% 0',
+            letterSpacing: 1,
+          }}
+        >
+          {btn.label}
+        </motion.button>
+      ))}
+    </div>
+  );
+});
+
+// Button Effects - MorphButton
+const MorphButton = React.memo(() => {
+  const controls = useControls();
+  const morphRadius = controls.morphRadius || 50;
+
+  const buttons = useMemo(() => [
+    { label: 'Primary', color: '#22d3ee', bg: 'rgba(34,211,238,0.1)' },
+    { label: 'Secondary', color: '#a855f7', bg: 'rgba(168,85,247,0.1)' },
+    { label: 'Accent', color: '#ec4899', bg: 'rgba(236,72,153,0.1)' },
+    { label: 'Success', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+  ], []);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+      {buttons.map((btn, i) => (
+        <motion.button
+          key={i}
+          whileHover={{
+            borderRadius: morphRadius,
+            scale: 1.08,
+            backgroundColor: btn.color,
+            color: '#050505',
+            boxShadow: `0 0 25px ${btn.color}66`,
+          }}
+          transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+          style={{
+            padding: '14px 48px',
+            fontSize: 16,
+            fontWeight: 600,
+            color: btn.color,
+            border: `2px solid ${btn.color}`,
+            borderRadius: 8,
+            cursor: 'pointer',
+            background: btn.bg,
+            letterSpacing: 1,
+            minWidth: 180,
+          }}
+        >
+          {btn.label}
+        </motion.button>
+      ))}
+    </div>
+  );
+});
+
+// Image Hover - ZoomReveal
+const ZoomReveal = React.memo(() => {
+  const controls = useControls();
+  const zoomScale = controls.zoomScale || 1.15;
+
+  const images = useMemo(() => [
+    { title: 'Mountain Peak', subtitle: 'Elevation 4,200m', gradient: 'linear-gradient(135deg, #1e3a5f, #0891b2)' },
+    { title: 'Ocean Deep', subtitle: 'Depth 3,800m', gradient: 'linear-gradient(135deg, #1e1b4b, #6366f1)' },
+    { title: 'Desert Dunes', subtitle: 'Temperature 52°C', gradient: 'linear-gradient(135deg, #78350f, #f59e0b)' },
+  ], []);
+
+  return (
+    <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', alignItems: 'center', height: '100%', flexWrap: 'wrap' }}>
+      {images.map((img, i) => (
+        <motion.div
+          key={i}
+          whileHover="hovered"
+          style={{
+            width: 220, height: 280, borderRadius: 12,
+            overflow: 'hidden', position: 'relative', cursor: 'pointer',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <motion.div
+            variants={{ hovered: { scale: zoomScale } }}
+            transition={{ duration: 0.4 }}
+            style={{
+              width: '100%', height: '100%',
+              background: img.gradient,
+            }}
+          />
+          <motion.div
+            variants={{
+              hovered: { opacity: 1, y: 0 },
+            }}
+            initial={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0,
+              padding: 20,
+              background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+            }}
+          >
+            <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>{img.title}</h3>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, margin: '4px 0 0' }}>{img.subtitle}</p>
+          </motion.div>
+        </motion.div>
+      ))}
+    </div>
+  );
+});
+
+// Image Hover - ShutterReveal
+const ShutterReveal = React.memo(() => {
+  const controls = useControls();
+  const shutterBars = controls.shutterBars || 5;
+
+  const images = useMemo(() => [
+    { gradient: 'linear-gradient(135deg, #22d3ee, #a855f7)', label: 'Project Alpha' },
+    { gradient: 'linear-gradient(135deg, #a855f7, #ec4899)', label: 'Project Beta' },
+    { gradient: 'linear-gradient(135deg, #ec4899, #f59e0b)', label: 'Project Gamma' },
+  ], []);
+
+  return (
+    <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', alignItems: 'center', height: '100%', flexWrap: 'wrap' }}>
+      {images.map((img, idx) => (
+        <motion.div
+          key={idx}
+          whileHover="revealed"
+          initial="hidden"
+          style={{
+            width: 220, height: 280, borderRadius: 12,
+            overflow: 'hidden', position: 'relative', cursor: 'pointer',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          {/* Background image/gradient */}
+          <div style={{ position: 'absolute', inset: 0, background: img.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: '#fff', fontSize: 18, fontWeight: 700 }}>{img.label}</span>
+          </div>
+          {/* Shutter bars */}
+          {[...Array(shutterBars)].map((_, i) => (
+            <motion.div
+              key={i}
+              variants={{
+                hidden: { scaleY: 1 },
+                revealed: { scaleY: 0, transition: { delay: i * 0.05, duration: 0.3 } },
+              }}
+              style={{
+                position: 'absolute',
+                top: `${(i / shutterBars) * 100}%`,
+                left: 0, right: 0,
+                height: `${100 / shutterBars}%`,
+                background: '#0a0a0a',
+                transformOrigin: 'top',
+              }}
+            />
+          ))}
+        </motion.div>
+      ))}
+    </div>
+  );
+});
+
+// ============================================================
 // SCENE WRAPPER
 // ============================================================
 const AnimationScene = ({ children, pages = 3 }) => (
@@ -1609,6 +2884,20 @@ const AnimationScene = ({ children, pages = 3 }) => (
     <ScrollControls pages={pages} damping={0.12}>
       <Scroll>{children}</Scroll>
     </ScrollControls>
+  </>
+);
+
+// ============================================================
+// MOUSE SCENE WRAPPER (no ScrollControls)
+// ============================================================
+const MouseScene = ({ children }) => (
+  <>
+    <ambientLight intensity={0.3} />
+    <pointLight position={[-10, 10, 10]} intensity={2} color="#22d3ee" />
+    <pointLight position={[10, -10, -10]} intensity={2} color="#ec4899" />
+    <Stars radius={100} depth={50} count={2000} factor={4} fade speed={0.5} />
+    <fog attach="fog" args={['#050505', 10, 80]} />
+    {children}
   </>
 );
 
@@ -1663,6 +2952,44 @@ const ANIMATIONS = {
   orbit: [
     { name: 'Zoom Orbit', component: ZoomOrbit, description: 'Auto rotation with scroll-based zoom' },
     { name: 'Speed Orbit', component: SpeedOrbit, description: 'Rotation speed based on scroll velocity' }
+  ],
+  // Mouseover - 3D Canvas
+  hovertransform: [
+    { name: 'Scale Pop', component: ScalePop, description: 'Grid of boxes scale up on hover with glow' },
+    { name: 'Spin Hover', component: SpinHover, description: 'Torus knots spin while hovered' }
+  ],
+  mousefollow: [
+    { name: 'Tracking Sphere', component: TrackingSphere, description: 'Sphere follows mouse position in 3D' },
+    { name: 'Lazy Follow', component: LazyFollow, description: 'Chain of spheres follow with staggered delay' }
+  ],
+  hoverglow: [
+    { name: 'Emission Pulse', component: EmissionPulse, description: 'Emissive glow ramps up on hover' },
+    { name: 'Color Shift', component: ColorShift, description: 'Objects shift hue near cursor' }
+  ],
+  magnetic: [
+    { name: 'Attract Grid', component: AttractGrid, description: 'Grid pulled toward mouse position' },
+    { name: 'Repel Field', component: RepelField, description: 'Objects pushed away from cursor' }
+  ],
+  ripple: [
+    { name: 'Surface Ripple', component: SurfaceRipple, description: 'Shader waves from pointer position' },
+    { name: 'Wave Ring', component: WaveRing, description: 'Concentric rings pulse from cursor' }
+  ],
+  // Mouseover - DOM
+  cardhover: [
+    { name: 'Tilt Card', component: TiltCard, description: '3D perspective tilt on mouse move' },
+    { name: 'Flip Card', component: FlipCard, description: 'Card flips to reveal back on hover' }
+  ],
+  texthover: [
+    { name: 'Letter Spread', component: LetterSpread, description: 'Letters animate upward with stagger' },
+    { name: 'Glitch Text', component: GlitchText, description: 'Digital glitch distortion on hover' }
+  ],
+  buttonhover: [
+    { name: 'Slide Button', component: SlideButton, description: 'Gradient slides across on hover' },
+    { name: 'Morph Button', component: MorphButton, description: 'Button morphs shape and fills on hover' }
+  ],
+  imagehover: [
+    { name: 'Zoom Reveal', component: ZoomReveal, description: 'Image zooms with text overlay on hover' },
+    { name: 'Shutter Reveal', component: ShutterReveal, description: 'Venetian blind reveal effect' }
   ]
 };
 
@@ -1820,6 +3147,13 @@ export default function App() {
   const CurrentComponent = currentAnimations[activeExample].component;
   const currentInfo = currentAnimations[activeExample];
 
+  const activeCategoryData = CATEGORIES.find(c => c.id === activeCategory);
+  const isMouseCategory = activeCategoryData?.type === 'mouse';
+  const isDomRenderer = activeCategoryData?.renderer === 'dom';
+
+  const scrollCategories = CATEGORIES.filter(c => c.type === 'scroll');
+  const mouseCategories = CATEGORIES.filter(c => c.type === 'mouse');
+
   return (
     <ControlsContext.Provider value={controls}>
       <div className="app-root" data-testid="app-container">
@@ -1829,16 +3163,34 @@ export default function App() {
             <p className="loader-text">Loading...</p>
           </div>
         )}
-        
+
         {/* Sidebar */}
         <nav className="sidebar" data-testid="sidebar">
           <div className="sidebar-header">
             <h1 className="sidebar-title">Immersive<span>Horizons</span></h1>
-            <p className="sidebar-subtitle">3D Scroll Effects</p>
+            <p className="sidebar-subtitle">3D Interactive Effects</p>
           </div>
-          
+
           <div className="sidebar-categories">
-            {CATEGORIES.map(cat => (
+            <div className="sidebar-section-label">Scroll Effects</div>
+            {scrollCategories.map(cat => (
+              <button
+                key={cat.id}
+                className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
+                onClick={() => handleSetCategory(cat.id)}
+                data-testid={`category-${cat.id}`}
+                title={cat.name}
+              >
+                <span className="category-icon">{cat.icon}</span>
+                <div className="category-info">
+                  <span className="category-name">{cat.name}</span>
+                  <span className="category-desc">{cat.description}</span>
+                </div>
+              </button>
+            ))}
+
+            <div className="sidebar-section-label">Mouseover Effects</div>
+            {mouseCategories.map(cat => (
               <button
                 key={cat.id}
                 className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
@@ -1855,7 +3207,7 @@ export default function App() {
             ))}
           </div>
         </nav>
-        
+
         {/* Main Content */}
         <main className="main-content">
           <div className="example-tabs" data-testid="example-tabs">
@@ -1870,33 +3222,47 @@ export default function App() {
               </button>
             ))}
           </div>
-          
+
           <div className="canvas-container">
-            {/* Performance: Canvas key excludes controls to prevent WebGL context re-creation.
-                Components react to control changes via ControlsContext instead. */}
-            <Canvas
-              key={`${activeCategory}-${activeExample}`}
-              camera={{ position: [0, 0, 10], fov: 55 }}
-              gl={{ antialias: true, powerPreference: 'high-performance' }}
-            >
-              <color attach="background" args={['#050505']} />
-              <Suspense fallback={null}>
-                <AnimationScene pages={3}>
-                  <CurrentComponent />
-                </AnimationScene>
-              </Suspense>
-            </Canvas>
+            {isDomRenderer ? (
+              <div className="dom-scene" key={`${activeCategory}-${activeExample}`}>
+                <CurrentComponent />
+              </div>
+            ) : (
+              <Canvas
+                key={`${activeCategory}-${activeExample}`}
+                camera={{ position: [0, 0, 10], fov: 55 }}
+                gl={{ antialias: true, powerPreference: 'high-performance' }}
+              >
+                <color attach="background" args={['#050505']} />
+                <Suspense fallback={null}>
+                  {isMouseCategory ? (
+                    <MouseScene>
+                      <CurrentComponent />
+                    </MouseScene>
+                  ) : (
+                    <AnimationScene pages={3}>
+                      <CurrentComponent />
+                    </AnimationScene>
+                  )}
+                </Suspense>
+              </Canvas>
+            )}
           </div>
-          
+
           <div className="info-panel" data-testid="info-panel">
             <h2 className="info-title">{currentInfo.name}</h2>
             <p className="info-desc">{currentInfo.description}</p>
             <div className="scroll-hint">
-              <span>↕</span> Scroll to interact
+              {isMouseCategory ? (
+                <><span>🖱</span> Hover to interact</>
+              ) : (
+                <><span>↕</span> Scroll to interact</>
+              )}
             </div>
           </div>
         </main>
-        
+
         {/* Right Panel */}
         <RightPanel
           isOpen={isPanelOpen}
