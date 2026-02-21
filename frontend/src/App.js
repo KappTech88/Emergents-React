@@ -2996,11 +2996,27 @@ const ANIMATIONS = {
 // ============================================================
 // CODE PANEL COMPONENT
 // ============================================================
-const CodeBlock = ({ code }) => (
-  <pre className="code-block">
-    <code>{code}</code>
-  </pre>
-);
+const CodeBlock = ({ code }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [code]);
+
+  return (
+    <div className="code-block-wrapper">
+      <button className="copy-btn" onClick={handleCopy} title="Copy code">
+        {copied ? '✓ Copied' : 'Copy'}
+      </button>
+      <pre className="code-block">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+};
 
 const RightPanel = ({ isOpen, onToggle, activeTab, setActiveTab, category, example, controls, setControls }) => {
   const snippets = CODE_SNIPPETS[category]?.[example] || CODE_SNIPPETS[category]?.[0];
@@ -3111,20 +3127,64 @@ const RightPanel = ({ isOpen, onToggle, activeTab, setActiveTab, category, examp
 // ============================================================
 // MAIN APP
 // ============================================================
+const parseHash = () => {
+  const hash = window.location.hash.replace('#', '');
+  if (!hash) return null;
+  const parts = hash.split('-');
+  const catId = parts[0];
+  const exIdx = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+  if (ANIMATIONS[catId]) {
+    const validIdx = isNaN(exIdx) ? 0 : Math.min(exIdx, ANIMATIONS[catId].length - 1);
+    return { category: catId, example: Math.max(0, validIdx) };
+  }
+  return null;
+};
+
 export default function App() {
-  const [activeCategory, setActiveCategory] = useState('tunnel');
-  const [activeExample, setActiveExample] = useState(0);
+  const initialHash = parseHash();
+  const [activeCategory, setActiveCategory] = useState(initialHash?.category || 'tunnel');
+  const [activeExample, setActiveExample] = useState(initialHash?.example || 0);
   const [isLoading, setIsLoading] = useState(true);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('code');
   const [controls, setControls] = useState({});
+  const [scrollSectionOpen, setScrollSectionOpen] = useState(true);
+  const [mouseSectionOpen, setMouseSectionOpen] = useState(true);
+  const hashNavRef = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 800);
     return () => clearTimeout(timer);
   }, []);
 
+  // Update URL hash when category or example changes
   useEffect(() => {
+    const hash = `#${activeCategory}-${activeExample}`;
+    if (window.location.hash !== hash) {
+      window.history.replaceState(null, '', hash);
+    }
+  }, [activeCategory, activeExample]);
+
+  // Listen for browser back/forward navigation
+  useEffect(() => {
+    const onHashChange = () => {
+      const parsed = parseHash();
+      if (parsed) {
+        hashNavRef.current = true;
+        setActiveCategory(parsed.category);
+        setActiveExample(parsed.example);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
+    if (hashNavRef.current) {
+      hashNavRef.current = false;
+      setControls({});
+      return;
+    }
     setActiveExample(0);
     setControls({}); // Reset controls when category changes
   }, [activeCategory]);
@@ -3133,6 +3193,14 @@ export default function App() {
   // Note: setState functions from useState are stable and don't need to be in dependency arrays
   const handleTogglePanel = useCallback(() => {
     setIsPanelOpen(prev => !prev);
+  }, []);
+
+  const handleToggleScrollSection = useCallback(() => {
+    setScrollSectionOpen(prev => !prev);
+  }, []);
+
+  const handleToggleMouseSection = useCallback(() => {
+    setMouseSectionOpen(prev => !prev);
   }, []);
 
   const handleSetCategory = useCallback((catId) => {
@@ -3172,8 +3240,11 @@ export default function App() {
           </div>
 
           <div className="sidebar-categories">
-            <div className="sidebar-section-label">Scroll Effects</div>
-            {scrollCategories.map(cat => (
+            <button className="sidebar-section-label" onClick={handleToggleScrollSection}>
+              <span className={`sidebar-section-chevron ${scrollSectionOpen ? 'open' : ''}`}>&#9656;</span>
+              Scroll Effects
+            </button>
+            {scrollSectionOpen && scrollCategories.map(cat => (
               <button
                 key={cat.id}
                 className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
@@ -3189,8 +3260,11 @@ export default function App() {
               </button>
             ))}
 
-            <div className="sidebar-section-label">Mouseover Effects</div>
-            {mouseCategories.map(cat => (
+            <button className="sidebar-section-label" onClick={handleToggleMouseSection}>
+              <span className={`sidebar-section-chevron ${mouseSectionOpen ? 'open' : ''}`}>&#9656;</span>
+              Mouseover Effects
+            </button>
+            {mouseSectionOpen && mouseCategories.map(cat => (
               <button
                 key={cat.id}
                 className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
